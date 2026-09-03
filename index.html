@@ -80,8 +80,21 @@
       </div>
     </header>
 
-    <!-- Main Workspace: Split View -->
-    <main class="app-main">
+    <!-- Mobile Tab Bar (Hiển thị riêng cho màn hình Mobile & Tablet <= 1024px) -->
+    <nav class="mobile-tab-bar" id="mobile-tab-bar" aria-label="Điều hướng tab di động">
+      <button type="button" class="mobile-tab-btn active" id="tab-btn-lessons" data-target-tab="lessons">
+        <span class="tab-icon">📖</span>
+        <span class="tab-label">Bài học &amp; Ghi chú</span>
+      </button>
+      <button type="button" class="mobile-tab-btn" id="tab-btn-chat" data-target-tab="chat">
+        <span class="tab-icon">🤖</span>
+        <span class="tab-label">Sensei AI Chat</span>
+        <span class="tab-badge-dot hidden" id="chat-tab-badge" title="Có tin nhắn AI mới"></span>
+      </button>
+    </nav>
+
+    <!-- Main Workspace: Split View trên Desktop, 2 Tabs riêng biệt trên Mobile -->
+    <main class="app-main" data-active-mobile-tab="lessons">
       <!-- CỘT TRÁI: KHÔNG GIAN BÀI HỌC & GHI CHÚ -->
       <section class="panel-left">
         <!-- VIEW 1: DANH SÁCH BÀI HỌC (REQ 1.1, REQ 1.2) -->

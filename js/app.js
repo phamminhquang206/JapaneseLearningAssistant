@@ -37,6 +37,13 @@
     this.panelRight = document.querySelector('.panel-right');
     this.layoutResizer = document.getElementById('layout-resizer');
 
+    // Mobile Tab Navigation
+    this.mobileTabBar = document.getElementById('mobile-tab-bar');
+    this.tabBtnLessons = document.getElementById('tab-btn-lessons');
+    this.tabBtnChat = document.getElementById('tab-btn-chat');
+    this.chatTabBadge = document.getElementById('chat-tab-badge');
+    this.activeMobileTab = 'lessons';
+
     // Views
     this.lessonListView = document.getElementById('view-lesson-list');
     this.lessonEditorView = document.getElementById('view-lesson-editor');
@@ -218,14 +225,28 @@
 
     // Nhấp đúp chuột để reset về kích thước mặc định (460px)
     resizer.addEventListener('dblclick', () => {
-      if (window.innerWidth <= 1024) return;
       rightPanel.style.width = '460px';
       Storage.setChatPanelWidth(460);
-      this.showToast('Đã đặt lại kích thước mặc định (460px) cho khung Chat AI', 'info');
+      this.showToast('Đã khôi phục kích thước khung Chat mặc định.', 'info');
     });
 
     resizer.addEventListener('mousedown', onMouseDown);
     resizer.addEventListener('touchstart', onTouchStart, { passive: true });
+  }
+
+  // --- QUẢN LÝ CHUYỂN ĐỔI 2 TAB RIÊNG BIỆT TRÊN MOBILE & TABLET ---
+  switchMobileTab(tabName) {
+    this.activeMobileTab = tabName; // 'lessons' | 'chat'
+    if (this.appMain) {
+      this.appMain.setAttribute('data-active-mobile-tab', tabName);
+    }
+    if (this.tabBtnLessons && this.tabBtnChat) {
+      this.tabBtnLessons.classList.toggle('active', tabName === 'lessons');
+      this.tabBtnChat.classList.toggle('active', tabName === 'chat');
+    }
+    if (tabName === 'chat' && this.chatTabBadge) {
+      this.chatTabBadge.classList.add('hidden');
+    }
   }
 
   initEditor() {
@@ -382,6 +403,14 @@
       this.btnConfirmCloseHelp.addEventListener('click', () => this.closeModal(this.modalHelp));
     }
 
+    // Điều hướng 2 Tab trên Mobile
+    if (this.tabBtnLessons) {
+      this.tabBtnLessons.addEventListener('click', () => this.switchMobileTab('lessons'));
+    }
+    if (this.tabBtnChat) {
+      this.tabBtnChat.addEventListener('click', () => this.switchMobileTab('chat'));
+    }
+
     // Đóng modal khi click ra ngoài overlay
     window.addEventListener('click', (e) => {
       if (e.target.classList.contains('modal-overlay')) {
@@ -415,6 +444,9 @@
 
     // Render danh sách bài học
     this.renderLessonList();
+
+    // Khởi tạo tab di động ban đầu
+    this.switchMobileTab('lessons');
 
     // Kiểm tra xem có bài học đang mở sẵn không
     const activeLessonId = Storage.getActiveLessonId();
@@ -571,6 +603,9 @@
       this.switchView('editor');
     }
     this.updateHeaderActiveBadge();
+    if (shouldSwitchView && window.innerWidth <= 1024) {
+      this.switchMobileTab('lessons');
+    }
   }
 
   updateHeaderActiveBadge() {
@@ -827,6 +862,9 @@
       this.chatInput.focus();
       this.chatInput.style.height = 'auto';
       this.chatInput.style.height = Math.min(this.chatInput.scrollHeight, 120) + 'px';
+      if (window.innerWidth <= 1024) {
+        this.switchMobileTab('chat');
+      }
       this.handleSendChatMessage();
     }
   }
@@ -871,6 +909,11 @@
         role: 'model',
         text: aiResponseText
       });
+
+      // Nếu đang ở màn hình mobile và người dùng ở tab Bài học, hiển thị chấm thông báo trên tab Chat
+      if (this.activeMobileTab !== 'chat' && this.chatTabBadge) {
+        this.chatTabBadge.classList.remove('hidden');
+      }
 
       Storage.saveChatHistory(this.chatHistory);
       this.renderChatMessages();
