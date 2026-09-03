@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NihonGo AI - Trợ Lý Học Tiếng Nhật &amp; Ghi Chú Thông Minh</title>
+  <meta name="description" content="Web App hỗ trợ học tiếng Nhật theo giáo trình Minna no Nihongo, tích hợp trợ lý Gemini AI tổng hợp từ vựng, ngữ pháp, bài tập và xuất ghi chú Notion nhanh chóng.">
+  
+  <!-- Google Fonts: Plus Jakarta Sans & Noto Sans JP -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Stylesheets -->
+  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+
+  <!-- PWA & Mobile Web App Meta Tags -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#4f46e5">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="NihonGo AI">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+
+  <!-- Markdown Parsing & Rendering (Ưu tiên file local đảm bảo 100% không phụ thuộc CDN, kèm fallback) -->
+  <script src="js/marked.min.js"></script>
+  <script>
+    if (typeof window.marked === 'undefined') {
+      document.write('<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"><\\/script>');
+    }
+  </script>
+  <script src="js/markdown.js"></script>
+</head>
+<body>
+  <div class="app-wrapper">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand-container">
+        <a href="#" class="brand-logo" id="brand-logo">
+          <span class="torii-icon">⛩️</span>
+          <span>NihonGo AI</span>
+        </a>
+        <span class="brand-kanji">日本語学習</span>
+      </div>
+
+      <div class="header-status-area">
+        <!-- API Status Badge -->
+        <div id="api-key-status-badge" class="api-badge missing" title="Cấu hình Gemini API Key">
+          ○ Gemini AI: <span>Chưa cấu hình</span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Nút Tải App PWA -->
+        <button id="btn-install-pwa" class="btn-install-pwa" title="Cài đặt NihonGo AI về máy để sử dụng như một ứng dụng độc lập">
+          <span class="install-icon">📲</span>
+          <span>Tải App</span>
+        </button>
+        <button id="btn-new-lesson" class="btn-primary" title="Tạo bài học mới (REQ 1.2)">
+          <span>➕</span>
+          <span>Tạo bài học mới</span>
+        </button>
+        <button id="btn-refresh" class="btn-icon" title="Tải lại trang / Làm mới ứng dụng (F5)">
+          🔄
+        </button>
+        <button id="btn-settings" class="btn-icon" title="Cài đặt Gemini API Key &amp; Model">
+          ⚙️
+        </button>
+        <button id="btn-theme-toggle" class="btn-icon" title="Chuyển đổi giao diện Sáng / Tối">
+          🌙
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Workspace: Split View -->
+    <main class="app-main">
+      <!-- CỘT TRÁI: KHÔNG GIAN BÀI HỌC & GHI CHÚ -->
+      <section class="panel-left">
+        <!-- VIEW 1: DANH SÁCH BÀI HỌC (REQ 1.1, REQ 1.2) -->
+        <div id="view-lesson-list" class="view-container">
+          <div class="view-toolbar">
+            <div class="toolbar-row">
+              <div class="search-box">
+                <span class="search-icon">🔍</span>
+                <input type="text" id="lesson-search-input" placeholder="Tìm kiếm bài học, từ vựng hoặc ngữ pháp..." autocomplete="off">
+              </div>
+            </div>
+            <div class="toolbar-row">
+              <div class="stats-bar">
+                <span class="stat-tag">📚 Tổng số: <strong id="stat-total-lessons">0</strong></span>
+                <span class="stat-tag">📖 Đang học: <strong id="stat-learning">0</strong></span>
+                <span class="stat-tag">✅ Đã xong: <strong id="stat-completed">0</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Grid hiển thị danh sách bài học -->
+          <div class="lessons-scroll-container">
+            <div id="lessons-grid" class="lessons-grid">
+              <!-- Nội dung do app.js render tự động -->
+            </div>
+          </div>
+        </div>
+
+        <!-- VIEW 2: TRANG SOẠN THẢO GHI CHÚ BÀI HỌC (REQ 1.2) -->
+        <div id="view-lesson-editor" class="view-container hidden">
+          <!-- Top Navigation của Editor -->
+          <div class="editor-top-nav">
+            <div class="editor-breadcrumbs">
+              <button id="btn-back-to-list" class="btn-back-link">
+                <span>←</span>
+                <span>Danh sách bài học</span>
+              </button>
+            </div>
+            <div class="editor-actions-top">
+              <span id="editor-save-indicator" class="editor-save-status">Đã đồng bộ</span>
+            </div>
+          </div>
+
+          <!-- Tiêu đề & Thông tin bài học -->
+          <div class="editor-header-meta">
+            <input type="text" id="editor-lesson-title" class="lesson-title-input" placeholder="Nhập tên bài học..." spellcheck="false">
+            <span id="editor-lesson-syllabus" class="lesson-syllabus-badge">Minna no Nihongo</span>
+            <select id="editor-lesson-status" class="editor-status-select" title="Trạng thái tiến độ">
+              <option value="learning">● Đang học</option>
+              <option value="completed">✓ Đã hoàn thành</option>
+            </select>
+          </div>
+
+          <!-- Thanh công cụ soạn thảo tối giản -->
+          <div class="editor-toolbar">
+            <div class="toolbar-group">
+              <button class="btn-tool" data-toolbar-action="bold" title="In đậm (Ctrl+B)"><strong>B</strong></button>
+              <button class="btn-tool" data-toolbar-action="italic" title="In nghiêng (Ctrl+I)"><em>I</em></button>
+              <div class="toolbar-divider"></div>
+              <button class="btn-tool" data-toolbar-action="table" title="Chèn mẫu bảng từ vựng">📊 Bảng từ</button>
+              <button class="btn-tool" data-toolbar-action="quote" title="Hộp lưu ý/Ghi nhớ">💡 Lưu ý</button>
+            </div>
+
+            <div class="toolbar-group">
+              <button id="btn-editor-copy-notion" class="btn-secondary" style="padding: 4px 10px; font-size: 0.8rem;" title="Sao chép toàn bộ nội dung chuẩn Markdown để dán vào Notion">
+                📋 Copy cho Notion
+              </button>
+              <div class="toolbar-divider"></div>
+              <!-- Chuyển đổi đơn giản: Soạn thảo hoặc Xem bài học -->
+              <div class="view-mode-toggle">
+                <button class="btn-mode active" data-editor-view="edit">✍️ Soạn thảo</button>
+                <button class="btn-mode" data-editor-view="preview">👁️ Xem bài học</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Không gian soạn thảo rộng rãi, tối giản -->
+          <div class="editor-workspace mode-edit">
+            <div class="editor-pane-edit">
+              <textarea id="editor-textarea" class="editor-textarea" placeholder="Ghi chú nội dung bài học tại đây (hỗ trợ định dạng Markdown)..." spellcheck="false"></textarea>
+            </div>
+            <div class="editor-pane-preview">
+              <div id="editor-preview" class="markdown-body">
+                <!-- Nội dung Markdown render tự động ở đây -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- THANH KÉO ĐIỀU CHỈNH KÍCH THƯỚC (RESIZABLE DIVIDER) -->
+      <div id="layout-resizer" class="layout-resizer" title="Nhấp giữ và kéo sang trái/phải để điều chỉnh độ rộng khung Chat AI (Nhấp đúp để đặt lại)" role="separator" aria-orientation="vertical">
+        <div class="resizer-handle-grip"></div>
+      </div>
+
+      <!-- CỘT PHẢI: TRỢ LÝ AI GEMINI (REQ 1.3, 1.4, 1.5, 1.6) -->
+      <section class="panel-right">
+        <!-- AI Header -->
+        <div class="ai-header">
+          <div class="ai-header-left">
+            <div class="ai-title-group">
+              <h3>⛩️ Sensei AI Assistant</h3>
+              <div id="chat-active-lesson-badge" class="active-lesson-hint hidden">
+                Đang liên kết: <strong>Bài 27</strong>
+              </div>
+            </div>
+          </div>
+          <div class="ai-header-right">
+            <button id="btn-clear-chat" class="btn-icon" title="Làm mới cuộc hội thoại">
+              🔄
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Prompts Chips (REQ 1.6) -->
+        <div class="quick-prompts-section">
+          <div class="quick-prompts-label">⚡ Gợi ý lệnh nhanh</div>
+          <div class="quick-chips-scroll">
+            <button class="quick-chip" data-prompt-template="summary-lesson">
+              <span>📖</span> Tổng hợp từ vựng &amp; ngữ pháp bài [X]
+            </button>
+            <button class="quick-chip" data-prompt-template="summarize-to-active">
+              <span>📝</span> Tổng hợp kiến thức vào bài học vừa tạo
+            </button>
+            <button class="quick-chip" data-prompt-template="exercises">
+              <span>🎯</span> Thêm nội dung luyện tập, bài tập
+            </button>
+            <button class="quick-chip" data-prompt-template="grammar-explain">
+              <span>💡</span> Giải thích ngữ pháp chuyên sâu
+            </button>
+          </div>
+        </div>
+
+        <!-- Khung hội thoại AI -->
+        <div id="chat-messages" class="chat-messages-container">
+          <!-- Tin nhắn được render tự động qua JavaScript -->
+        </div>
+
+        <!-- Hiệu ứng đang tạo câu trả lời -->
+        <div id="chat-loading" class="chat-loading hidden">
+          <div class="spinner"></div>
+          <span>Sensei AI đang tổng hợp kiến thức từ internet và giáo trình...</span>
+        </div>
+
+        <!-- Khung nhập lệnh chat -->
+        <div class="chat-input-area">
+          <div class="chat-input-box">
+            <textarea id="chat-input" class="chat-textarea" placeholder="Nhập câu hỏi (Ví dụ: Tổng hợp từ vựng và ngữ pháp tiếng Nhật bài 27)..." rows="1"></textarea>
+            <button id="btn-send-message" class="btn-chat-send" title="Gửi tin nhắn (Enter)">
+              ➤
+            </button>
+          </div>
+          <div class="chat-input-hint">
+            Nhấn <kbd>Enter</kbd> để gửi, <kbd>Shift + Enter</kbd> để xuống dòng
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- =========================================================================
+       MODALS
+       ========================================================================= -->
+
+  <!-- Modal 1: Cài đặt Gemini API Key (REQ 1.3) -->
+  <div id="modal-settings" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon">⚙️</span>
+          <h3>Cài đặt Gemini AI</h3>
+        </div>
+        <button id="btn-close-settings" class="btn-icon">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="input-gemini-key">Google Gemini API Key:</label>
+          <input type="password" id="input-gemini-key" class="form-input" placeholder="Dán khóa API Key của bạn (AIzaSy...)">
+          <div class="form-hint">
+            Chưa có key? <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Lấy API Key miễn phí tại Google AI Studio ↗</a>
+          </div>
+          <div class="form-hint" style="color: var(--sakura);">
+            🔒 Khóa của bạn được lưu an toàn tại bộ nhớ trình duyệt (LocalStorage) của bạn, không qua bất kỳ máy chủ trung gian nào.
+          </div>
+        </div>
+
+        <div class="form-group">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+            <label for="select-gemini-model" style="margin-bottom: 0;">Phiên bản Gemini Model:</label>
+            <button type="button" id="btn-load-models" class="btn-secondary" style="padding: 3px 10px; font-size: 0.78rem; gap: 4px;" title="Tải tất cả các model được hỗ trợ bởi API Key của bạn">
+              🔄 Tải tất cả Model
+            </button>
+          </div>
+          <select id="select-gemini-model" class="form-select">
+            <option value="" disabled selected>-- Chưa có model (Vui lòng bấm "Tải tất cả Model") --</option>
+          </select>
+          <div id="load-models-status" class="form-hint" style="margin-top: 4px;"></div>
+        </div>
+
+        <div style="display: flex; align-items: center; justify-content: space-between;">
+          <button id="btn-test-api-key" class="btn-secondary" type="button">
+            🔍 Kiểm tra kết nối
+          </button>
+          <div id="api-test-result" class="api-test-result"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-save-settings" class="btn-primary">Lưu cấu hình</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 2: Tạo bài học mới (REQ 1.2) -->
+  <div id="modal-new-lesson" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon">🌸</span>
+          <h3>Tạo bài học tiếng Nhật mới</h3>
+        </div>
+        <button id="btn-close-new-lesson" class="btn-icon">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="select-preset-lesson">Chọn nhanh theo bài Minna no Nihongo:</label>
+          <select id="select-preset-lesson" class="form-select">
+            <!-- Render bài 1 đến 50 tự động -->
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="input-lesson-title">Tên bài học:</label>
+          <input type="text" id="input-lesson-title" class="form-input" placeholder="Ví dụ: Bài 27: Động từ thể khả năng">
+        </div>
+
+        <div style="display: flex; gap: 12px;">
+          <div class="form-group" style="flex: 1;">
+            <label for="input-lesson-number">Số bài (nếu có):</label>
+            <input type="number" id="input-lesson-number" class="form-input" placeholder="27" min="1" max="100">
+          </div>
+          <div class="form-group" style="flex: 2;">
+            <label for="input-lesson-syllabus">Giáo trình:</label>
+            <input type="text" id="input-lesson-syllabus" class="form-input" value="Minna no Nihongo" placeholder="Minna no Nihongo, Genki...">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-confirm-create-lesson" class="btn-sakura">
+          <span>Tạo &amp; Bắt đầu ghi chú</span>
+          <span>→</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 3: Lưu nội dung AI vào bài học (REQ 1.5) -->
+  <div id="modal-save-to-lesson" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon">💾</span>
+          <h3>Lưu kết quả AI vào bài học</h3>
+        </div>
+        <button id="btn-close-save-to-lesson" class="btn-icon">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="select-target-lesson">Chọn bài học bạn muốn lưu vào:</label>
+          <select id="select-target-lesson" class="form-select">
+            <!-- Danh sách bài học được đổ vào đây -->
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Chế độ lưu:</label>
+          <div style="display: flex; gap: 16px; margin-top: 4px;">
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: normal;">
+              <input type="radio" name="save-mode" id="save-mode-append" checked>
+              <span>Nối tiếp vào cuối ghi chú (Khuyên dùng)</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-weight: normal;">
+              <input type="radio" name="save-mode" id="save-mode-overwrite">
+              <span>Ghi đè toàn bộ</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Xem trước nội dung sẽ lưu:</label>
+          <div id="preview-ai-content" style="max-height: 120px; overflow-y: auto; background: var(--bg-subtle); padding: 10px; border-radius: var(--radius-sm); font-size: 0.82rem; font-family: monospace; white-space: pre-wrap; color: var(--text-secondary); border: 1px solid var(--border-color);">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-confirm-save-to-lesson" class="btn-primary">
+          Xác nhận lưu vào bài học
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Application Logic -->
+  <script src="js/pwa.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/gemini.js"></script>
+  <script src="js/editor.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5" />
+      <stop offset="50%" stop-color="#4338ca" />
+      <stop offset="100%" stop-color="#1e1b4b" />
+    </linearGradient>
+    <linearGradient id="sunGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fb7185" />
+      <stop offset="100%" stop-color="#e11d48" />
+    </linearGradient>
+    <linearGradient id="toriiGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#f1f5f9" />
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.35" />
+    </filter>
+  </defs>
+
+  <!-- Background rounded rectangle -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)" />
+
+  <!-- Rising Sun Accent -->
+  <circle cx="256" cy="240" r="140" fill="url(#sunGrad)" opacity="0.85" filter="url(#shadow)" />
+
+  <!-- Cherry Blossom Accent Dots -->
+  <circle cx="130" cy="140" r="10" fill="#fbcfe8" opacity="0.8" />
+  <circle cx="160" cy="115" r="7" fill="#f472b6" opacity="0.7" />
+  <circle cx="370" cy="130" r="9" fill="#fbcfe8" opacity="0.8" />
+  <circle cx="395" cy="160" r="6" fill="#f472b6" opacity="0.7" />
+  <circle cx="110" cy="380" r="8" fill="#fbcfe8" opacity="0.6" />
+  <circle cx="410" cy="360" r="8" fill="#fbcfe8" opacity="0.6" />
+
+  <!-- Japanese Torii Gate -->
+  <g filter="url(#shadow)" fill="url(#toriiGrad)">
+    <!-- Top Kasagi Beam (Curved top beam) -->
+    <path d="M 96 172 C 180 156, 332 156, 416 172 C 424 174, 428 182, 422 188 L 406 200 C 400 204, 392 204, 386 202 C 310 188, 202 188, 126 202 C 120 204, 112 204, 106 200 L 90 188 C 84 182, 88 174, 96 172 Z" />
+    
+    <!-- Shimaki (Straight beam beneath top beam) -->
+    <rect x="120" y="206" width="272" height="20" rx="4" />
+
+    <!-- Nuki (Middle horizontal crossbar) -->
+    <rect x="100" y="258" width="312" height="22" rx="5" />
+
+    <!-- Gakuzuka (Center tablet strut) -->
+    <rect x="246" y="206" width="20" height="52" rx="3" />
+
+    <!-- Left Main Pillar (Hashira) -->
+    <polygon points="166,206 190,206 182,410 156,410" />
+    <!-- Left Base Stone (Daiishi) -->
+    <rect x="146" y="406" width="46" height="18" rx="4" fill="#cbd5e1" />
+
+    <!-- Right Main Pillar (Hashira) -->
+    <polygon points="322,206 346,206 356,410 330,410" />
+    <!-- Right Base Stone (Daiishi) -->
+    <rect x="320" y="406" width="46" height="18" rx="4" fill="#cbd5e1" />
+  </g>
+
+  <!-- Kanji Badge in center: 日本語 -->
+  <g filter="url(#shadow)">
+    <rect x="186" y="432" width="140" height="34" rx="17" fill="#e11d48" />
+    <text x="256" y="455" font-family="'Noto Sans JP', sans-serif, system-ui" font-size="16" font-weight="bold" fill="#ffffff" text-anchor="middle" letter-spacing="2">日本語 AI</text>
+  </g>
+</svg>

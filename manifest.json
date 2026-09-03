@@ -1,0 +1,58 @@
+{
+  "id": "nihongo-ai-pwa",
+  "name": "NihonGo AI - Trợ Lý Học Tiếng Nhật & Ghi Chú Thông Minh",
+  "short_name": "NihonGo AI",
+  "description": "Ứng dụng hỗ trợ học tiếng Nhật theo giáo trình Minna no Nihongo, tích hợp trợ lý Sensei AI tổng hợp từ vựng, ngữ pháp và bài tập nhanh chóng.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": ["standalone", "window-controls-overlay"],
+  "orientation": "any",
+  "theme_color": "#4f46e5",
+  "background_color": "#0f172a",
+  "lang": "vi",
+  "dir": "ltr",
+  "categories": ["education", "productivity"],
+  "icons": [
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Tạo bài học mới",
+      "short_name": "Tạo bài học",
+      "description": "Tạo trang ghi chú bài học mới",
+      "url": "./index.html?action=new-lesson",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Sensei AI Chat",
+      "short_name": "Chat AI",
+      "description": "Trò chuyện với Sensei AI",
+      "url": "./index.html?action=chat",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}
