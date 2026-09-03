@@ -12,7 +12,8 @@
   ACTIVE_LESSON: 'nihongo_active_lesson_id',
   THEME: 'nihongo_theme',
   CHAT_HISTORY: 'nihongo_chat_history',
-  CHAT_PANEL_WIDTH: 'nihongo_chat_panel_width'
+  CHAT_PANEL_WIDTH: 'nihongo_chat_panel_width',
+  CHAT_COLLAPSED: 'nihongo_chat_collapsed'
 };
 
 const DEFAULT_MODEL = 'gemini-3.5-flash-lite';
@@ -169,6 +170,18 @@ const AppStorage = {
   setChatPanelWidth(width) {
     if (width) {
       localStorage.setItem(STORAGE_KEYS.CHAT_PANEL_WIDTH, width);
+    }
+  },
+
+  // Trạng thái thu gọn / ẩn Chat AI
+  isChatCollapsed() {
+    return localStorage.getItem(STORAGE_KEYS.CHAT_COLLAPSED) === 'true';
+  },
+  setChatCollapsed(collapsed) {
+    if (collapsed) {
+      localStorage.setItem(STORAGE_KEYS.CHAT_COLLAPSED, 'true');
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.CHAT_COLLAPSED);
     }
   }
 };

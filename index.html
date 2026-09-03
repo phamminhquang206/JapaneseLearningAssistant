@@ -71,6 +71,9 @@
         <button id="btn-help" class="btn-icon" title="Hướng dẫn sử dụng NihonGo AI">
           ❓
         </button>
+        <button id="btn-toggle-chat" class="btn-icon" title="Ẩn/Hiện khung Chat AI (Ctrl + \)">
+          🤖
+        </button>
         <button id="btn-settings" class="btn-icon" title="Cài đặt Gemini API Key &amp; Model">
           ⚙️
         </button>
@@ -95,6 +98,12 @@
 
     <!-- Main Workspace: Split View trên Desktop, 2 Tabs riêng biệt trên Mobile -->
     <main class="app-main" data-active-mobile-tab="lessons">
+      <!-- Nút nổi mở lại Chat AI khi đang tạm ẩn trên Desktop -->
+      <button id="btn-floating-open-chat" class="btn-floating-open-chat" title="Mở lại khung Sensei AI Chat (Ctrl + \)">
+        <span>🤖</span>
+        <span>Hiện Chat AI</span>
+      </button>
+
       <!-- CỘT TRÁI: KHÔNG GIAN BÀI HỌC & GHI CHÚ -->
       <section class="panel-left">
         <!-- VIEW 1: DANH SÁCH BÀI HỌC (REQ 1.1, REQ 1.2) -->
@@ -205,6 +214,9 @@
           <div class="ai-header-right">
             <button id="btn-clear-chat" class="btn-icon" title="Làm mới cuộc hội thoại">
               🔄
+            </button>
+            <button id="btn-collapse-chat" class="btn-icon" title="Tạm ẩn khung Chat AI để hiển thị toàn bộ bài học (Ctrl + \)">
+              ✕
             </button>
           </div>
         </div>

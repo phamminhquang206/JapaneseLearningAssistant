@@ -173,6 +173,63 @@
   position: relative;
 }
 
+/* --- Trạng thái Ẩn / Thu gọn Khung Chat AI (Xem toàn màn hình Bài học) --- */
+.app-main.chat-collapsed .panel-right {
+  display: none !important;
+}
+
+.app-main.chat-collapsed .layout-resizer {
+  display: none !important;
+}
+
+.app-main.chat-collapsed .panel-left {
+  flex: 1 1 100% !important;
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Nút nổi mở lại Chat AI khi đang ẩn trên Desktop */
+.btn-floating-open-chat {
+  position: absolute;
+  top: 14px;
+  right: 20px;
+  z-index: 35;
+  display: none;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-full);
+  padding: 8px 18px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(99, 102, 241, 0.4);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: floatSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-floating-open-chat:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+}
+
+@keyframes floatSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.app-main.chat-collapsed .btn-floating-open-chat {
+  display: inline-flex !important;
+}
+
 /* Trạng thái đang kéo co giãn toàn trang */
 body.is-resizing-layout {
   cursor: col-resize !important;

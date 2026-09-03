@@ -30,6 +30,10 @@
     this.btnSettings = document.getElementById('btn-settings');
     this.btnThemeToggle = document.getElementById('btn-theme-toggle');
     this.apiKeyStatusBadge = document.getElementById('api-key-status-badge');
+    this.btnToggleChat = document.getElementById('btn-toggle-chat');
+    this.btnCollapseChat = document.getElementById('btn-collapse-chat');
+    this.btnFloatingOpenChat = document.getElementById('btn-floating-open-chat');
+    this.isChatCollapsed = false;
 
     // Main workspace & Resizer
     this.appMain = document.querySelector('.app-main');
@@ -249,6 +253,41 @@
     }
   }
 
+  // --- QUẢN LÝ ẨN / THU GỌN KHUNG CHAT AI TRÊN DESKTOP & TABLET ---
+  setChatCollapsed(isCollapsed) {
+    this.isChatCollapsed = isCollapsed;
+    Storage.setChatCollapsed(isCollapsed);
+
+    if (this.appMain) {
+      this.appMain.classList.toggle('chat-collapsed', isCollapsed);
+    }
+    if (this.btnToggleChat) {
+      this.btnToggleChat.classList.toggle('active', !isCollapsed);
+      this.btnToggleChat.title = isCollapsed
+        ? 'Hiện khung Chat AI (Ctrl + \\)'
+        : 'Tạm ẩn khung Chat AI để hiển thị toàn bộ bài học (Ctrl + \\)';
+    }
+
+    // Phục hồi kích thước trên desktop khi mở lại
+    if (!isCollapsed && window.innerWidth > 1024 && this.panelRight) {
+      const savedWidth = Storage.getChatPanelWidth() || 460;
+      this.panelRight.style.width = `${savedWidth}px`;
+    }
+  }
+
+  toggleChatPanel() {
+    if (window.innerWidth <= 1024) {
+      // Trên mobile/tablet (chế độ tab): chuyển đổi giữa 2 tab
+      const nextTab = this.activeMobileTab === 'chat' ? 'lessons' : 'chat';
+      this.switchMobileTab(nextTab);
+    } else {
+      // Trên desktop: bật/tắt class chat-collapsed
+      const currentlyCollapsed = this.appMain.classList.contains('chat-collapsed');
+      this.setChatCollapsed(!currentlyCollapsed);
+      this.showToast(currentlyCollapsed ? 'Đã hiển thị lại khung Chat AI' : 'Đã ẩn Chat AI (Xem toàn màn hình bài học)', 'info');
+    }
+  }
+
   initEditor() {
     this.editor = new LessonEditor({
       containerEl: this.lessonEditorView,
@@ -411,6 +450,30 @@
       this.tabBtnChat.addEventListener('click', () => this.switchMobileTab('chat'));
     }
 
+    // Bật/Tắt ẩn hiện Chat AI (Desktop & Mobile)
+    if (this.btnToggleChat) {
+      this.btnToggleChat.addEventListener('click', () => this.toggleChatPanel());
+    }
+    if (this.btnCollapseChat) {
+      this.btnCollapseChat.addEventListener('click', () => {
+        this.setChatCollapsed(true);
+        this.showToast('Đã tạm ẩn Chat AI. Nhấn "Hiện Chat AI" hoặc icon 🤖 để mở lại.', 'info');
+      });
+    }
+    if (this.btnFloatingOpenChat) {
+      this.btnFloatingOpenChat.addEventListener('click', () => {
+        this.setChatCollapsed(false);
+      });
+    }
+
+    // Phím tắt Ctrl + \ hoặc F2 để ẩn/hiện nhanh Chat AI
+    window.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === '\\') {
+        e.preventDefault();
+        this.toggleChatPanel();
+      }
+    });
+
     // Đóng modal khi click ra ngoài overlay
     window.addEventListener('click', (e) => {
       if (e.target.classList.contains('modal-overlay')) {
@@ -447,6 +510,11 @@
 
     // Khởi tạo tab di động ban đầu
     this.switchMobileTab('lessons');
+
+    // Khôi phục trạng thái ẩn Chat AI trên Desktop nếu người dùng đã ẩn từ trước
+    if (window.innerWidth > 1024 && Storage.isChatCollapsed()) {
+      this.setChatCollapsed(true);
+    }
 
     // Kiểm tra xem có bài học đang mở sẵn không
     const activeLessonId = Storage.getActiveLessonId();
@@ -864,6 +932,8 @@
       this.chatInput.style.height = Math.min(this.chatInput.scrollHeight, 120) + 'px';
       if (window.innerWidth <= 1024) {
         this.switchMobileTab('chat');
+      } else if (this.isChatCollapsed) {
+        this.setChatCollapsed(false);
       }
       this.handleSendChatMessage();
     }
