@@ -45,13 +45,26 @@ Nhiệm vụ của bạn:
    - Cung cấp khoảng 10 - 15 từ vựng chọn lọc tiêu biểu nhất của bài đó.
    - Vẫn luôn phân loại chi tiết thành: Danh từ, Động từ, Tính từ, Phó từ/Cụm từ giao tiếp theo các bảng Markdown chuẩn như trên.
 
-3. QUY TẮC ĐỊNH DẠNG ĐẦU RA (RẤT QUAN TRỌNG):
+3. HỖ TRỢ TÌM KIẾM VIDEO YOUTUBE & ĐƯA RA LINK BẤM ĐƯỢC (RẤT QUAN TRỌNG):
+   Khi người dùng yêu cầu tìm video YouTube (ví dụ: "Tìm video bài 27", "video luyện nghe", "video giải thích ngữ pháp bài X trên Youtube", hoặc khi cần minh họa bài học bằng video):
+   - Bạn hãy gợi ý và đề xuất các kênh / video học tiếng Nhật uy tín, chất lượng nhất (như Dũng Mori, Riki Nihongo, Tiếng Nhật Đơn Giản, Nihongo no Mori - 日本語の森, Cùng học tiếng Nhật, Akane Japanese...).
+   - BẮT BUỘC cung cấp link YouTube trực tiếp có thể bấm vào được bằng cú pháp Markdown:
+     [📺 Xem video trên YouTube: <Tiêu đề bài giảng / Kênh>](https://www.youtube.com/results?search_query=<từ_khóa_tìm_kiếm_chuẩn_nối_bằng_dấu_cộng>)
+     *Ví dụ mẫu chuẩn:*
+     - [📺 Xem video YouTube: Ngữ pháp Minna no Nihongo Bài 27 - Dũng Mori](https://www.youtube.com/results?search_query=ngu+phap+minna+no+nihongo+bai+27+dung+mori)
+     - [📺 Xem video YouTube: Luyện nghe tiếng Nhật Minna no Nihongo Bài 27](https://www.youtube.com/results?search_query=luyen+nghe+minna+no+nihongo+bai+27)
+     - [📺 Xem video YouTube: Phân biệt Tự động từ và Tha động từ tiếng Nhật](https://www.youtube.com/results?search_query=tu+dong+tu+tha+dong+tu+tieng+nhat)
+   - Cung cấp link dạng https://www.youtube.com/results?search_query=... với các từ khóa chuẩn xác là cách tối ưu và ổn định 100%, giúp người dùng bấm vào là mở ngay video chất lượng cao nhất tương ứng mà không bao giờ bị lỗi link hỏng hoặc video bị xóa.
+   - Ghi chú thêm tóm tắt ngắn gọn nội dung video sẽ giúp ích gì cho bài học và mẹo luyện tập (ví dụ: nghe lặp lại Shadowing, bật phụ đề song ngữ CC).
+
+4. QUY TẮC ĐỊNH DẠNG ĐẦU RA (RẤT QUAN TRỌNG):
    - TUYỆT ĐỐI KHÔNG bọc toàn bộ câu trả lời trong khối code (không dùng \`\`\` hoặc \`\`\`markdown ở đầu và cuối phản hồi). Trả về văn bản Markdown trực tiếp để trình duyệt có thể render thành HTML, bảng biểu, tiêu đề đẹp mắt.
    - TUYỆT ĐỐI KHÔNG thụt lề 4 dấu cách hoặc phím Tab ở đầu dòng các tiêu đề (#, ##, ###) hoặc dòng kẻ bảng (|...|) vì trong Markdown 4 dấu cách đầu dòng sẽ biến văn bản thành khối code thô (pre/code).
    - Dùng tiêu đề chuẩn (#, ##, ###), bảng (Tables chuẩn Markdown), danh sách gạch đầu dòng và in đậm (**...**).
    - Kanji đi kèm Furigana/Hiragana trong ngoặc đơn nếu là từ mới.
+   - TUYỆT ĐỐI KHÔNG sử dụng ký hiệu LaTeX toán học như $\rightarrow$, $\Rightarrow$, \rightarrow, \to khi viết quy tắc ngữ pháp, công thức, cách chia động từ. BẮT BUỘC dùng trực tiếp ký tự mũi tên Unicode chuẩn như: "→", "⇒", "↔" (ví dụ: かきます → かけます, N1 → N2, V1 → V2).
 
-4. Luôn giữ thái độ thân thiện, tận tâm, khích lệ người học (có thể đệm các từ chào tiếng Nhật như "Ganbatte kudasai!").`;
+5. Luôn giữ thái độ thân thiện, tận tâm, khích lệ người học (có thể đệm các từ chào tiếng Nhật như "Ganbatte kudasai!").`;
 
 const TARGET_MODELS = [
   {
@@ -230,9 +243,57 @@ const GeminiService = {
       throw new Error('Gemini không trả về nội dung hợp lệ. Vui lòng thử lại.');
     }
 
-    return candidate.content.parts[0].text;
+    const rawOutput = candidate.content.parts[0].text || '';
+    return cleanLatexSymbols(rawOutput);
   }
 };
 
+/**
+ * Hàm làm sạch triệt để các ký hiệu LaTeX (như $\rightarrow$, \rightarrow, $\Rightarrow$...)
+ * và chuyển đổi thành ký tự Unicode chuẩn (→, ⇒, ...)
+ */
+function cleanLatexSymbols(text) {
+  if (!text || typeof text !== 'string') return '';
+
+  let cleaned = text;
+
+  // 1. Thay thế các biến thể cụ thể của mũi tên và ký hiệu toán học phổ biến (có hoặc không có dấu $)
+  cleaned = cleaned
+    .replace(/\\rightarrow|\$+\s*\\rightarrow\s*\$+|\\to|\$+\s*\\to\s*\$+/gi, '→')
+    .replace(/\\Rightarrow|\$+\s*\\Rightarrow\s*\$+|\\implies|\$+\s*\\implies\s*\$+/gi, '⇒')
+    .replace(/\\leftarrow|\$+\s*\\leftarrow\s*\$+/gi, '←')
+    .replace(/\\Leftarrow|\$+\s*\\Leftarrow\s*\$+/gi, '⇐')
+    .replace(/\\leftrightarrow|\$+\s*\\leftrightarrow\s*\$+/gi, '↔')
+    .replace(/\\Leftrightarrow|\$+\s*\\Leftrightarrow\s*\$+|\\iff|\$+\s*\\iff\s*\$+/gi, '⇔')
+    .replace(/\\uparrow|\$+\s*\\uparrow\s*\$+/gi, '↑')
+    .replace(/\\downarrow|\$+\s*\\downarrow\s*\$+/gi, '↓')
+    .replace(/\\dots|\\cdots|\\ldots|\$+\s*\\(?:dots|cdots|ldots)\s*\$+/gi, '...')
+    .replace(/\\times|\$+\s*\\times\s*\$+/gi, '×')
+    .replace(/\\div|\$+\s*\\div\s*\$+/gi, '÷')
+    .replace(/\\approx|\$+\s*\\approx\s*\$+/gi, '≈')
+    .replace(/\\neq|\$+\s*\\neq\s*\$+/gi, '≠')
+    .replace(/\\le(q)?|\$+\s*\\le(q)?\s*\$+/gi, '≤')
+    .replace(/\\ge(q)?|\$+\s*\\ge(q)?\s*\$+/gi, '≥')
+    .replace(/\\pm|\$+\s*\\pm\s*\$+/gi, '±')
+    .replace(/\\bullet|\$+\s*\\bullet\s*\$+/gi, '•')
+    .replace(/\\sim|\$+\s*\\sim\s*\$+/gi, '~');
+
+  // 2. Xử lý các khối LaTeX $ ... $ còn sót lại bao bọc từ hoặc mũi tên
+  cleaned = cleaned.replace(/\$([^$]+)\$/g, (match, inner) => {
+    const innerCleaned = inner
+      .replace(/\\text\{([^}]+)\}/g, '$1')
+      .replace(/\\mathrm\{([^}]+)\}/g, '$1')
+      .replace(/\\mathbf\{([^}]+)\}/g, '$1')
+      .replace(/\\rightarrow|\\to/gi, '→')
+      .replace(/\\Rightarrow|\\implies/gi, '⇒')
+      .replace(/\\leftarrow/gi, '←')
+      .replace(/\\leftrightarrow/gi, '↔');
+    return innerCleaned.trim();
+  });
+
+  return cleaned;
+}
+
+  window.cleanLatexSymbols = cleanLatexSymbols;
   window.GeminiService = GeminiService;
 })();

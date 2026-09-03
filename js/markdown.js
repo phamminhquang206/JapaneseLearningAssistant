@@ -64,6 +64,32 @@
     // 4. Chuẩn hóa thụt lề cho danh sách không biến thành code block
     text = text.replace(/^[ \t]{4,}([-*+]\s|\d+\.\s)/gm, '  $1');
 
+    // 5. Khử sạch toàn bộ ký hiệu LaTeX (như $\rightarrow$, \rightarrow, $\Rightarrow$...) thành ký tự Unicode chuẩn (→, ⇒, ...)
+    if (typeof window.cleanLatexSymbols === 'function') {
+      text = window.cleanLatexSymbols(text);
+    } else {
+      text = text
+        .replace(/\\rightarrow|\$+\s*\\rightarrow\s*\$+|\\to|\$+\s*\\to\s*\$+/gi, '→')
+        .replace(/\\Rightarrow|\$+\s*\\Rightarrow\s*\$+|\\implies|\$+\s*\\implies\s*\$+/gi, '⇒')
+        .replace(/\\leftarrow|\$+\s*\\leftarrow\s*\$+/gi, '←')
+        .replace(/\\Leftarrow|\$+\s*\\Leftarrow\s*\$+/gi, '⇐')
+        .replace(/\\leftrightarrow|\$+\s*\\leftrightarrow\s*\$+/gi, '↔')
+        .replace(/\\Leftrightarrow|\$+\s*\\Leftrightarrow\s*\$+|\\iff|\$+\s*\\iff\s*\$+/gi, '⇔')
+        .replace(/\\uparrow|\$+\s*\\uparrow\s*\$+/gi, '↑')
+        .replace(/\\downarrow|\$+\s*\\downarrow\s*\$+/gi, '↓')
+        .replace(/\\dots|\\cdots|\\ldots|\$+\s*\\(?:dots|cdots|ldots)\s*\$+/gi, '...')
+        .replace(/\\times|\$+\s*\\times\s*\$+/gi, '×')
+        .replace(/\\div|\$+\s*\\div\s*\$+/gi, '÷')
+        .replace(/\\approx|\$+\s*\\approx\s*\$+/gi, '≈')
+        .replace(/\\neq|\$+\s*\\neq\s*\$+/gi, '≠')
+        .replace(/\\le(q)?|\$+\s*\\le(q)?\s*\$+/gi, '≤')
+        .replace(/\\ge(q)?|\$+\s*\\ge(q)?\s*\$+/gi, '≥')
+        .replace(/\\pm|\$+\s*\\pm\s*\$+/gi, '±')
+        .replace(/\\bullet|\$+\s*\\bullet\s*\$+/gi, '•')
+        .replace(/\\sim|\$+\s*\\sim\s*\$+/gi, '~')
+        .replace(/\$([^$]+)\$/g, (m, inner) => inner.replace(/\\rightarrow|\\to/gi, '→').replace(/\\Rightarrow/gi, '⇒').trim());
+    }
+
     return text;
   }
 
@@ -117,6 +143,7 @@
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
+        .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
         .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
         .replace(/\*([^*]+)\*/g, '<em>$1</em>')
         .replace(/`([^`]+)`/g, '<code>$1</code>');
@@ -243,6 +270,18 @@
         wrapper.className = 'table-responsive';
         table.parentNode.insertBefore(wrapper, table);
         wrapper.appendChild(table);
+      }
+    });
+
+    // Xử lý các liên kết: Luôn mở tab mới và nhận diện link video YouTube
+    const links = temp.querySelectorAll('a');
+    links.forEach(a => {
+      a.setAttribute('target', '_blank');
+      a.setAttribute('rel', 'noopener noreferrer');
+
+      const href = a.getAttribute('href') || '';
+      if (/youtube\.com|youtu\.be/i.test(href)) {
+        a.classList.add('youtube-link');
       }
     });
 

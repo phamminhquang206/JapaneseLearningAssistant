@@ -923,6 +923,11 @@
       promptText = `Thêm nội dung luyện tập, bài tập trắc nghiệm và điền từ cho ${lessonInfo}, có kèm đáp án và giải thích chi tiết.`;
     } else if (template === 'grammar-explain') {
       promptText = `Giải thích chuyên sâu các điểm ngữ pháp trọng tâm và đặt 3 câu ví dụ thực tế có dịch nghĩa.`;
+    } else if (template === 'youtube-search') {
+      const lessonInfo = this.activeLesson
+        ? `bài học "${this.activeLesson.title}" (Bài ${this.activeLesson.lessonNumber || ''})`
+        : 'tiếng Nhật Minna no Nihongo';
+      promptText = `Tìm các video bài giảng YouTube hay nhất giải thích từ vựng, ngữ pháp và luyện nghe cho ${lessonInfo}. Hãy đưa ra các đường link YouTube cụ thể để tôi bấm vào xem ngay nhé!`;
     }
 
     if (promptText) {
@@ -1086,7 +1091,7 @@
   }
 
   openSaveToLessonModal(contentToSave) {
-    this.tempAiContentToSave = contentToSave;
+    this.tempAiContentToSave = window.MarkdownRenderer?.cleanText ? window.MarkdownRenderer.cleanText(contentToSave) : contentToSave;
     const lessons = Storage.getLessons();
 
     if (lessons.length === 0) {
