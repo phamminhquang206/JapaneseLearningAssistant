@@ -68,6 +68,9 @@
         <button id="btn-refresh" class="btn-icon" title="Tải lại trang / Làm mới ứng dụng (F5)">
           🔄
         </button>
+        <button id="btn-help" class="btn-icon" title="Hướng dẫn sử dụng NihonGo AI">
+          ❓
+        </button>
         <button id="btn-settings" class="btn-icon" title="Cài đặt Gemini API Key &amp; Model">
           ⚙️
         </button>
@@ -375,6 +378,82 @@
       <div class="modal-footer">
         <button id="btn-confirm-save-to-lesson" class="btn-primary">
           Xác nhận lưu vào bài học
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal 4: Hướng dẫn sử dụng chi tiết -->
+  <div id="modal-help" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 680px;">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <span class="modal-icon">📖</span>
+          <h3>Hướng dẫn sử dụng NihonGo AI</h3>
+        </div>
+        <button id="btn-close-help" class="btn-icon">✕</button>
+      </div>
+      <div class="modal-body" style="max-height: 68vh; overflow-y: auto; padding: 20px 24px;">
+        <div class="help-grid">
+          
+          <div class="help-card">
+            <div class="help-card-header">
+              <span class="help-step-badge">1</span>
+              <h4>🔑 Cài đặt API Key &amp; Chọn Model</h4>
+            </div>
+            <p>Bấm biểu tượng <strong>⚙️ Cài đặt</strong> ở góc trên bên phải thanh công cụ:</p>
+            <ul>
+              <li>Dán <strong>Gemini API Key</strong> của bạn (lấy miễn phí tại <a href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer">Google AI Studio ↗</a>).</li>
+              <li>Bấm <strong>🔄 Tải tất cả Model</strong> để nạp danh sách 5 model khả dụng.</li>
+              <li>Chọn model <em>Gemini 3.5 Flash Lite (Khuyên dùng, 500 requests/ngày)</em> và bấm <strong>Lưu cấu hình</strong>.</li>
+            </ul>
+          </div>
+
+          <div class="help-card">
+            <div class="help-card-header">
+              <span class="help-step-badge">2</span>
+              <h4>📝 Tạo &amp; Ghi chú bài học</h4>
+            </div>
+            <p>Bấm nút <strong>➕ Tạo bài học mới</strong> để bắt đầu:</p>
+            <ul>
+              <li>Chọn nhanh theo giáo trình <strong>Minna no Nihongo (Bài 1 - 50)</strong> hoặc tự đặt tên tùy thích.</li>
+              <li>Soạn thảo ghi chú với Markdown trực quan, chia đề mục rõ ràng, thêm thẻ gắn Tag.</li>
+              <li>Đánh dấu trạng thái <strong>Đang học</strong> hoặc <strong>Hoàn thành</strong> để theo dõi tiến độ.</li>
+            </ul>
+          </div>
+
+          <div class="help-card">
+            <div class="help-card-header">
+              <span class="help-step-badge">3</span>
+              <h4>🤖 Tương tác cùng Sensei AI</h4>
+            </div>
+            <p>Sử dụng khung chat AI ở cột bên phải:</p>
+            <ul>
+              <li>Bấm các <strong>Gợi ý lệnh nhanh</strong> ở dưới ô chat để tự động tổng hợp từ vựng (10 - 15 từ vựng trọng tâm phân loại Danh từ, Động từ...), tạo bài tập trắc nghiệm, giải thích ngữ pháp.</li>
+              <li>Bấm <strong>📋 Sao chép Notion</strong> để copy bảng Markdown dán thẳng vào Notion.</li>
+              <li>Bấm <strong>📥 Lưu vào bài học</strong> để đưa kiến thức AI vào ngay cuối trang ghi chú đang mở.</li>
+            </ul>
+          </div>
+
+          <div class="help-card">
+            <div class="help-card-header">
+              <span class="help-step-badge">4</span>
+              <h4>💡 Tiện ích &amp; Phím tắt thông minh</h4>
+            </div>
+            <ul>
+              <li>↔️ <strong>Kéo co giãn khung Chat:</strong> Rê chuột vào thanh phân cách giữa 2 cột để kéo to/nhỏ tùy ý (nhấp đúp để đặt lại 460px).</li>
+              <li>📲 <strong>Tải App (PWA):</strong> Bấm nút <strong>📲 Tải App</strong> trên thanh công cụ để cài đặt app về máy tính/điện thoại dùng như phần mềm độc lập.</li>
+              <li>🔄 <strong>Làm mới (F5):</strong> Bấm icon 🔄 để tải lại trang nhanh chóng khi dùng app.</li>
+              <li>🌙 <strong>Chế độ Tối:</strong> Bấm icon 🌙/☀️ để chuyển giao diện bảo vệ mắt khi học ban đêm.</li>
+            </ul>
+          </div>
+
+        </div>
+      </div>
+      <div class="modal-footer" style="justify-content: flex-end;">
+        <button id="btn-confirm-close-help" class="btn-primary" style="padding: 9px 22px;">
+          <span>🌸</span>
+          <span>Đã hiểu, bắt đầu học ngay!</span>
         </button>
       </div>
     </div>

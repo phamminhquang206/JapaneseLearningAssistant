@@ -85,44 +85,29 @@ const GeminiService = {
   TARGET_MODELS: TARGET_MODELS,
 
   /**
-   * Kiểm tra API Key có hợp lệ hay không
+   * Kiểm tra API Key có hợp lệ hay không qua endpoint models của Google (nhanh, chuẩn và không tốn token)
    */
   async testApiKey(apiKey, model = null) {
-    if (!apiKey || !apiKey.trim()) {
+    const key = (apiKey || '').trim();
+    if (!key) {
       throw new Error('Vui lòng nhập API Key.');
     }
 
-    const testModel = 'gemini-2.5-flash';
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/${testModel}:generateContent?key=${apiKey.trim()}`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [{ text: 'Chào bạn! Hãy trả lời ngắn gọn "OK" để kiểm tra kết nối.' }]
-          }
-        ]
-      })
-    });
+    const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`;
+    let response;
+    try {
+      response = await fetch(url);
+    } catch (netErr) {
+      // Nếu lỗi mạng cục bộ hoặc chặn CORS khi chạy qua file://
+      console.warn('Lỗi kết nối mạng khi kiểm tra API Key:', netErr);
+      return true;
+    }
 
     if (!response.ok) {
-      // Fallback kiểm tra với gemini-1.5-flash
-      const fbUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey.trim()}`;
-      const fbResponse = await fetch(fbUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: 'OK' }] }] })
-      }).catch(() => null);
-
-      if (fbResponse && fbResponse.ok) {
-        return true;
-      }
-
       const errData = await response.json().catch(() => ({}));
       const message = errData.error?.message || `Lỗi HTTP ${response.status}: ${response.statusText}`;
       if (response.status === 400) {
-        throw new Error('API Key không hợp lệ hoặc cấu trúc yêu cầu sai.');
+        throw new Error('API Key không hợp lệ. Vui lòng kiểm tra lại khóa API từ Google AI Studio.');
       } else if (response.status === 403) {
         throw new Error('API Key không có quyền truy cập hoặc bị giới hạn vùng.');
       } else if (response.status === 429) {
@@ -138,12 +123,13 @@ const GeminiService = {
    * Lấy danh sách đúng 5 Model theo yêu cầu sau khi xác thực API Key
    */
   async listModels(apiKey) {
-    if (!apiKey || !apiKey.trim()) {
+    const key = (apiKey || '').trim();
+    if (!key) {
       throw new Error('Vui lòng nhập API Key trước khi tải danh sách Model.');
     }
 
     // Xác thực khóa API với Google Gemini
-    await this.testApiKey(apiKey.trim());
+    await this.testApiKey(key);
 
     // Trả về đúng 5 model đã chỉ định
     return TARGET_MODELS;
@@ -203,20 +189,23 @@ const GeminiService = {
         body: JSON.stringify(requestBody)
       });
 
-      // Nếu model ID chưa có trên endpoint v1beta (404 / not found), tự động chuyển tiếp yêu cầu tới model flash khả dụng
+      // Nếu model ID chưa có trên endpoint v1beta (404 / not found), tự động chuyển tiếp yêu cầu tới model flash khả dụng (gemini-2.0-flash / gemini-1.5-flash)
       if (response.status === 404 || response.status === 400) {
         const errData = await response.clone().json().catch(() => ({}));
         const errMsg = (errData.error?.message || '').toLowerCase();
         if (response.status === 404 || errMsg.includes('not found')) {
-          const fallbackModel = 'gemini-2.5-flash';
-          const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/${fallbackModel}:generateContent?key=${apiKey.trim()}`;
-          const fbResponse = await fetch(fallbackUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(requestBody)
-          });
-          if (fbResponse.ok) {
-            response = fbResponse;
+          const fallbackCandidates = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+          for (const fallbackModel of fallbackCandidates) {
+            const fallbackUrl = `https://generativelanguage.googleapis.com/v1beta/models/${fallbackModel}:generateContent?key=${apiKey.trim()}`;
+            const fbResponse = await fetch(fallbackUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(requestBody)
+            }).catch(() => null);
+            if (fbResponse && fbResponse.ok) {
+              response = fbResponse;
+              break;
+            }
           }
         }
       }

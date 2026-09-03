@@ -86,6 +86,12 @@
     this.btnConfirmSaveToLesson = document.getElementById('btn-confirm-save-to-lesson');
     this.btnCloseSaveToLesson = document.getElementById('btn-close-save-to-lesson');
 
+    // Help Guide Modal
+    this.btnHelp = document.getElementById('btn-help');
+    this.modalHelp = document.getElementById('modal-help');
+    this.btnCloseHelp = document.getElementById('btn-close-help');
+    this.btnConfirmCloseHelp = document.getElementById('btn-confirm-close-help');
+
     // Toast
     this.toastContainer = document.getElementById('toast-container');
   }
@@ -363,6 +369,17 @@
     // Chuyển đổi Dark / Light Theme
     if (this.btnThemeToggle) {
       this.btnThemeToggle.addEventListener('click', () => this.toggleTheme());
+    }
+
+    // Hướng dẫn sử dụng Modal
+    if (this.btnHelp) {
+      this.btnHelp.addEventListener('click', () => this.openModal(this.modalHelp));
+    }
+    if (this.btnCloseHelp) {
+      this.btnCloseHelp.addEventListener('click', () => this.closeModal(this.modalHelp));
+    }
+    if (this.btnConfirmCloseHelp) {
+      this.btnConfirmCloseHelp.addEventListener('click', () => this.closeModal(this.modalHelp));
     }
 
     // Đóng modal khi click ra ngoài overlay
@@ -686,7 +703,7 @@
       this.btnLoadModels.textContent = '⏳ Đang tải...';
     }
     if (this.loadModelsStatus) {
-      this.loadModelsStatus.textContent = 'Đang kiểm tra API Key và tải 5 model...';
+      this.loadModelsStatus.textContent = 'Đang kiểm tra API Key và nạp 5 model...';
       this.loadModelsStatus.style.color = 'var(--primary)';
     }
 
@@ -701,11 +718,15 @@
       }
       this.showToast(`Đã tải thành công ${models.length} model!`, 'success');
     } catch (err) {
+      // Vẫn nạp danh sách 5 model để người dùng có thể lựa chọn và lưu lại
+      const savedModel = Storage.getModel();
+      this.populateTargetModels(savedModel || 'gemini-3.5-flash-lite');
+
       if (this.loadModelsStatus) {
-        this.loadModelsStatus.textContent = `❌ ${err.message}`;
-        this.loadModelsStatus.style.color = 'var(--danger)';
+        this.loadModelsStatus.textContent = `⚠️ ${err.message}`;
+        this.loadModelsStatus.style.color = 'var(--warning)';
       }
-      this.showToast(err.message, 'error');
+      this.showToast(err.message, 'warning');
     } finally {
       if (this.btnLoadModels) {
         this.btnLoadModels.disabled = false;
