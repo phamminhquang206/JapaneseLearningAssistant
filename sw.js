@@ -2,7 +2,7 @@
  * sw.js - Service Worker cho NihonGo AI Progressive Web App (PWA)
  */
 
-const CACHE_NAME = 'nihongo-ai-v1';
+const CACHE_NAME = 'nihongo-ai-v2';
 const STATIC_ASSETS = [
   './',
   './index.html',
@@ -11,6 +11,8 @@ const STATIC_ASSETS = [
   './css/layout.css',
   './css/components.css',
   './js/storage.js',
+  './js/firebase-config.js',
+  './js/firebase-service.js',
   './js/marked.min.js',
   './js/markdown.js',
   './js/gemini.js',
@@ -53,8 +55,14 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const requestUrl = new URL(event.request.url);
 
-  // 1. Không can thiệp vào các yêu cầu gọi Google Gemini API hoặc POST requests
-  if (event.request.method !== 'GET' || requestUrl.hostname.includes('googleapis.com')) {
+  // 1. Không can thiệp vào các yêu cầu gọi Google API, Firebase Auth & Firestore
+  if (
+    event.request.method !== 'GET' ||
+    requestUrl.hostname.includes('googleapis.com') ||
+    requestUrl.hostname.includes('firebaseio.com') ||
+    requestUrl.hostname.includes('firebaseapp.com') ||
+    requestUrl.hostname.includes('gstatic.com')
+  ) {
     return;
   }
 

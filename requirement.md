@@ -51,9 +51,9 @@ Tài liệu đặc tả yêu cầu và hiện trạng tính năng của dự án
 
 ### REQ 1.5: Xuất & Liên kết dữ liệu ghi chú
 - **Nút 📋 Sao chép Notion:** Copy nhanh toàn bộ output của AI dưới định dạng Markdown chuẩn để dán trực tiếp vào ứng dụng Notion mà vẫn giữ nguyên cấu trúc bảng và đề mục.
-- **Nút 📥 Lưu vào bài học:** Mở popup cho phép chọn bài học đích và lựa chọn chế độ:
-  - *Nối tiếp vào cuối bài (Append - Khuyên dùng).*
-  - *Ghi đè toàn bộ nội dung (Overwrite).*
+- **Nút 📥 Lưu vào bài học:** Mở popup linh hoạt cho phép:
+  - *Tạo ngay 1 bài học / trang ghi chú riêng độc lập* (tự động gợi ý tiêu đề thông minh từ câu trả lời AI hoặc câu hỏi, tự do đặt tên và phân loại, không bị giới hạn trong 50 bài Minna).
+  - *Lưu vào bài học có sẵn* (chọn bài đích, chọn chế độ Nối tiếp Append hoặc Ghi đè Overwrite).
 
 ### REQ 1.6: Bộ câu lệnh mẫu nhanh (Quick Prompts)
 Tích hợp sẵn các chip gợi ý ngay bên dưới khung chat để người dùng truy vấn nhanh 1 chạm:

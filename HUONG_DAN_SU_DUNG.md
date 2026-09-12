@@ -32,7 +32,7 @@ Chào mừng bạn đến với **NihonGo AI** - Trợ lý thông minh hỗ tr�
   - 🔍 *Giải thích chi tiết cấu trúc ngữ pháp khó*.
 - **Xuất dữ liệu một chạm:**
   - **📋 Sao chép Notion:** Copy nội dung dạng Markdown chuẩn đẹp để dán ngay vào Notion.
-  - **📥 Lưu vào bài học:** Chèn trực tiếp nội dung AI vừa trả lời vào cuối bài ghi chú hiện tại của bạn.
+  - **📥 Lưu vào bài học:** Tạo nhanh một bài học ghi chú riêng mới độc lập từ kết quả AI hoặc lưu nối tiếp vào bài học sẵn có.
 
 ---
 
@@ -41,3 +41,16 @@ Chào mừng bạn đến với **NihonGo AI** - Trợ lý thông minh hỗ tr�
 - 📲 **Cài đặt thành Ứng dụng (PWA):** Bấm nút **"📲 Tải App"** trên thanh công cụ để cài đặt NihonGo AI về máy tính hoặc điện thoại dùng như phần mềm độc lập.
 - 🔄 **Làm mới trang (F5):** Bấm nút icon xoay tròn `🔄` trên thanh công cụ để tải lại ứng dụng nhanh chóng.
 - 🌙 **Chế độ Sáng / Tối:** Bấm biểu tượng 🌙/☀️ để bảo vệ mắt khi học ban đêm.
+
+---
+
+## ☁️ 5. Đăng nhập Google & Lưu trữ Đám mây Firebase
+- **Đăng nhập Google 1 chạm:** Bấm nút **"Đăng nhập Google"** trên thanh tiêu đề để đăng nhập tài khoản Google của bạn.
+- **Lưu trữ & Đồng bộ tự động:**
+  - Mọi bài học ghi chú, thay đổi nội dung và lịch sử Chat AI sẽ tự động lưu và đồng bộ lên **Firebase Firestore** theo tài khoản của bạn.
+  - Khi đăng nhập trên thiết bị khác (điện thoại, máy tính khác), toàn bộ bài học sẽ tự động được tải về đầy đủ.
+- **Menu Quản lý Tài khoản:**
+  - Nhấp vào **Avatar Google** trên thanh công cụ để xem email, trạng thái đồng bộ, nút **"🔄 Đồng bộ ngay"** và **"🚪 Đăng xuất"**.
+- **Tùy chỉnh Firebase Project:**
+  - Mở **⚙️ Cài đặt** -> chọn tab **🔥 Firebase Cloud Sync** để dán cấu hình Firebase Project của riêng bạn hoặc xem hướng dẫn tạo Firebase miễn phí.
+

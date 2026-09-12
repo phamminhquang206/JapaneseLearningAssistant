@@ -91,11 +91,34 @@
 
     // Save AI Output to Lesson Modal
     this.modalSaveToLesson = document.getElementById('modal-save-to-lesson');
+    this.tabSaveNew = document.getElementById('tab-save-new');
+    this.tabSaveExisting = document.getElementById('tab-save-existing');
+    this.sectionSaveNew = document.getElementById('section-save-new');
+    this.sectionSaveExisting = document.getElementById('section-save-existing');
+    this.inputSaveNewTitle = document.getElementById('input-save-new-title');
+    this.inputSaveNewSyllabus = document.getElementById('input-save-new-syllabus');
     this.selectTargetLesson = document.getElementById('select-target-lesson');
     this.previewAiContent = document.getElementById('preview-ai-content');
     this.radioSaveModeAppend = document.getElementById('save-mode-append');
     this.btnConfirmSaveToLesson = document.getElementById('btn-confirm-save-to-lesson');
     this.btnCloseSaveToLesson = document.getElementById('btn-close-save-to-lesson');
+    this.currentSaveMode = 'new';
+
+    // Google Auth & User Profile
+    this.btnGoogleLogin = document.getElementById('btn-google-login');
+    this.userProfileMenu = document.getElementById('user-profile-menu');
+    this.btnUserProfile = document.getElementById('btn-user-profile');
+    this.userAvatarImg = document.getElementById('user-avatar-img');
+    this.userDisplayName = document.getElementById('user-display-name');
+    this.syncCloudStatus = document.getElementById('sync-cloud-status');
+    this.userDropdownPanel = document.getElementById('user-dropdown-panel');
+    this.userDropdownAvatar = document.getElementById('user-dropdown-avatar');
+    this.userDropdownName = document.getElementById('user-dropdown-name');
+    this.userDropdownEmail = document.getElementById('user-dropdown-email');
+    this.statSyncText = document.getElementById('stat-sync-text');
+    this.btnManualSync = document.getElementById('btn-manual-sync');
+    this.btnGoogleLogout = document.getElementById('btn-google-logout');
+
 
     // Help Guide Modal
     this.btnHelp = document.getElementById('btn-help');
@@ -293,6 +316,13 @@
       containerEl: this.lessonEditorView,
       onSave: (id, data) => {
         Storage.updateLesson(id, data);
+        const currentUser = window.FirebaseService?.getCurrentUser();
+        if (currentUser) {
+          const fullLesson = Storage.getLesson(id);
+          if (fullLesson) {
+            window.FirebaseService.saveLessonToCloud(currentUser.uid, fullLesson);
+          }
+        }
         this.renderLessonList();
         this.updateHeaderActiveBadge();
       },
@@ -350,12 +380,52 @@
       this.btnSaveSettings.addEventListener('click', () => this.handleSaveSettings());
     }
 
+    // Google Auth & User Profile Events
+    if (this.btnGoogleLogin) {
+      this.btnGoogleLogin.addEventListener('click', () => this.handleGoogleLogin());
+    }
+    if (this.btnGoogleLogout) {
+      this.btnGoogleLogout.addEventListener('click', () => this.handleGoogleLogout());
+    }
+    if (this.btnManualSync) {
+      this.btnManualSync.addEventListener('click', () => this.handleManualSync());
+    }
+    if (this.btnUserProfile) {
+      this.btnUserProfile.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (this.userDropdownPanel) {
+          this.userDropdownPanel.classList.toggle('hidden');
+        }
+      });
+    }
+    document.addEventListener('click', (e) => {
+      if (this.userDropdownPanel && !this.userDropdownPanel.classList.contains('hidden')) {
+        if (!e.target.closest('#user-profile-menu')) {
+          this.userDropdownPanel.classList.add('hidden');
+        }
+      }
+    });
+
     // Modal Lưu vào bài học
     if (this.btnCloseSaveToLesson) {
       this.btnCloseSaveToLesson.addEventListener('click', () => this.closeModal(this.modalSaveToLesson));
     }
     if (this.btnConfirmSaveToLesson) {
       this.btnConfirmSaveToLesson.addEventListener('click', () => this.handleConfirmSaveToLesson());
+    }
+    if (this.tabSaveNew) {
+      this.tabSaveNew.addEventListener('click', () => this.switchSaveModalTab('new'));
+    }
+    if (this.tabSaveExisting) {
+      this.tabSaveExisting.addEventListener('click', () => this.switchSaveModalTab('existing'));
+    }
+    if (this.inputSaveNewTitle) {
+      this.inputSaveNewTitle.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          this.handleConfirmSaveToLesson();
+        }
+      });
     }
 
     // Chọn bài học mẫu trong modal tạo mới
@@ -508,6 +578,9 @@
     // Render danh sách bài học
     this.renderLessonList();
 
+    // Khởi tạo Firebase Auth & Sync
+    this.initFirebase();
+
     // Khởi tạo tab di động ban đầu
     this.switchMobileTab('lessons');
 
@@ -647,6 +720,10 @@
         e.stopPropagation();
         if (confirm(`Bạn có chắc muốn xóa "${lesson.title}" không?`)) {
           Storage.deleteLesson(lesson.id);
+          const currentUser = window.FirebaseService?.getCurrentUser();
+          if (currentUser) {
+            window.FirebaseService.deleteLessonFromCloud(currentUser.uid, lesson.id);
+          }
           this.renderLessonList();
           this.showToast('Đã xóa bài học.', 'info');
         }
@@ -746,6 +823,12 @@
       content: initialContent,
       tags: lessonNumber ? [`Bài ${lessonNumber}`, syllabus] : [syllabus]
     });
+
+    // Đồng bộ lên Firebase nếu đã đăng nhập
+    const currentUser = window.FirebaseService?.getCurrentUser();
+    if (currentUser) {
+      window.FirebaseService.saveLessonToCloud(currentUser.uid, newLesson);
+    }
 
     this.closeModal(this.modalNewLesson);
     this.renderLessonList();
@@ -991,6 +1074,10 @@
       }
 
       Storage.saveChatHistory(this.chatHistory);
+      const currentUser = window.FirebaseService?.getCurrentUser();
+      if (currentUser) {
+        window.FirebaseService.saveChatHistoryToCloud(currentUser.uid, this.chatHistory);
+      }
       this.renderChatMessages();
     } catch (err) {
       console.error('Lỗi Gemini Chat:', err);
@@ -1056,7 +1143,7 @@
 
         // Event nút "💾 Lưu vào bài học"
         msgDiv.querySelector('.btn-action-save-lesson').addEventListener('click', () => {
-          this.openSaveToLessonModal(msg.text);
+          this.openSaveToLessonModal(msg.text, idx);
         });
       }
 
@@ -1090,38 +1177,162 @@
     });
   }
 
-  openSaveToLessonModal(contentToSave) {
-    this.tempAiContentToSave = window.MarkdownRenderer?.cleanText ? window.MarkdownRenderer.cleanText(contentToSave) : contentToSave;
+  // Trích xuất tiêu đề gợi ý thông minh từ nội dung trả lời của AI hoặc câu hỏi của người dùng
+  extractSmartLessonTitle(content, userPrompt) {
+    if (!content) return 'Ghi chú tiếng Nhật mới';
+
+    // 1. Quét tìm dòng tiêu đề Markdown (# hoặc ##) ở phần đầu
+    const lines = content.trim().split('\n');
+    for (let i = 0; i < Math.min(lines.length, 10); i++) {
+      const trimmed = lines[i].trim();
+      if (/^#{1,3}\s+/.test(trimmed)) {
+        const titleText = trimmed.replace(/^#{1,3}\s+/, '').replace(/[*_`#]/g, '').trim();
+        if (titleText.length >= 3) {
+          return titleText.length > 60 ? titleText.slice(0, 60) + '...' : titleText;
+        }
+      }
+    }
+
+    // 2. Dùng câu hỏi của người dùng nếu có
+    if (userPrompt && typeof userPrompt === 'string') {
+      const cleanPrompt = userPrompt.replace(/[?？!！]/g, '').trim();
+      if (cleanPrompt.length >= 3) {
+        return cleanPrompt.length > 50 ? cleanPrompt.slice(0, 50) + '...' : cleanPrompt;
+      }
+    }
+
+    // 3. Dự phòng ngày tháng
+    const dateStr = new Date().toLocaleDateString('vi-VN');
+    return `Ghi chú tiếng Nhật (${dateStr})`;
+  }
+
+  // Chuyển đổi tab giữa Tạo bài học mới và Lưu vào bài học có sẵn
+  switchSaveModalTab(mode) {
+    this.currentSaveMode = mode;
     const lessons = Storage.getLessons();
 
-    if (lessons.length === 0) {
-      if (confirm('Bạn chưa có bài học nào. Bạn có muốn tạo bài học mới ngay bây giờ không?')) {
-        this.openNewLessonModal();
-      }
+    if (mode === 'existing' && lessons.length === 0) {
+      this.showToast('Bạn chưa có bài học nào có sẵn. Vui lòng tạo bài học mới!', 'info');
+      this.switchSaveModalTab('new');
       return;
     }
 
-    // Đổ danh sách bài học vào dropdown
-    this.selectTargetLesson.innerHTML = '';
-    lessons.forEach(l => {
-      const opt = document.createElement('option');
-      opt.value = l.id;
-      opt.textContent = `${l.title} (${l.syllabus || 'Minna no Nihongo'})`;
-      if (this.activeLesson && this.activeLesson.id === l.id) {
-        opt.selected = true;
+    if (this.tabSaveNew) this.tabSaveNew.classList.toggle('active', mode === 'new');
+    if (this.tabSaveExisting) this.tabSaveExisting.classList.toggle('active', mode === 'existing');
+
+    if (this.sectionSaveNew) this.sectionSaveNew.classList.toggle('hidden', mode !== 'new');
+    if (this.sectionSaveExisting) this.sectionSaveExisting.classList.toggle('hidden', mode !== 'existing');
+
+    if (this.btnConfirmSaveToLesson) {
+      if (mode === 'new') {
+        this.btnConfirmSaveToLesson.className = 'btn-sakura';
+        this.btnConfirmSaveToLesson.innerHTML = '<span>✨ Tạo bài học &amp; Mở ghi chú</span>';
+      } else {
+        this.btnConfirmSaveToLesson.className = 'btn-primary';
+        this.btnConfirmSaveToLesson.innerHTML = '<span>💾 Lưu vào bài học</span>';
       }
-      this.selectTargetLesson.appendChild(opt);
-    });
+    }
+
+    if (mode === 'new' && this.inputSaveNewTitle) {
+      setTimeout(() => this.inputSaveNewTitle.focus(), 80);
+    }
+  }
+
+  openSaveToLessonModal(contentToSave, msgIndex = -1) {
+    this.tempAiContentToSave = window.MarkdownRenderer?.cleanText ? window.MarkdownRenderer.cleanText(contentToSave) : contentToSave;
+    const lessons = Storage.getLessons();
+
+    // Tìm câu hỏi của user (nếu có) để tạo gợi ý tiêu đề thông minh
+    let userPrompt = '';
+    if (msgIndex > 0 && this.chatHistory && this.chatHistory[msgIndex - 1]) {
+      userPrompt = this.chatHistory[msgIndex - 1].text || '';
+    }
+
+    // Đề xuất tiêu đề thông minh cho bài học ghi chú riêng mới
+    const smartTitle = this.extractSmartLessonTitle(this.tempAiContentToSave, userPrompt);
+    if (this.inputSaveNewTitle) {
+      this.inputSaveNewTitle.value = smartTitle;
+    }
+    if (this.inputSaveNewSyllabus) {
+      this.inputSaveNewSyllabus.value = 'Ghi chú riêng';
+    }
+
+    // Đổ danh sách bài học có sẵn vào dropdown (nếu có)
+    if (this.selectTargetLesson) {
+      this.selectTargetLesson.innerHTML = '';
+      if (lessons.length > 0) {
+        lessons.forEach(l => {
+          const opt = document.createElement('option');
+          opt.value = l.id;
+          opt.textContent = `${l.title} (${l.syllabus || 'Ghi chú riêng'})`;
+          if (this.activeLesson && this.activeLesson.id === l.id) {
+            opt.selected = true;
+          }
+          this.selectTargetLesson.appendChild(opt);
+        });
+      }
+    }
+
+    // Cập nhật tab "Lưu vào bài có sẵn" với số lượng bài học
+    if (this.tabSaveExisting) {
+      this.tabSaveExisting.innerHTML = `<span>📂 Lưu vào bài có sẵn ${lessons.length > 0 ? `(${lessons.length})` : '(0 bài)'}</span>`;
+      this.tabSaveExisting.title = lessons.length === 0 ? 'Chưa có bài học nào sẵn có' : '';
+    }
 
     // Preview nội dung
-    this.previewAiContent.textContent = contentToSave.slice(0, 300) + (contentToSave.length > 300 ? '...' : '');
+    if (this.previewAiContent) {
+      this.previewAiContent.textContent = contentToSave.slice(0, 300) + (contentToSave.length > 300 ? '...' : '');
+    }
+
+    // Mặc định luôn ưu tiên Tab Tạo bài mới theo yêu cầu của user
+    this.switchSaveModalTab('new');
 
     this.openModal(this.modalSaveToLesson);
   }
 
   handleConfirmSaveToLesson() {
-    const targetId = this.selectTargetLesson.value;
-    if (!targetId || !this.tempAiContentToSave) return;
+    if (!this.tempAiContentToSave) return;
+
+    if (this.currentSaveMode === 'new') {
+      const title = this.inputSaveNewTitle ? this.inputSaveNewTitle.value.trim() : '';
+      if (!title) {
+        alert('Vui lòng nhập tên bài học / ghi chú!');
+        if (this.inputSaveNewTitle) this.inputSaveNewTitle.focus();
+        return;
+      }
+
+      const syllabus = (this.inputSaveNewSyllabus ? this.inputSaveNewSyllabus.value.trim() : '') || 'Ghi chú riêng';
+      const formattedContent = `# ${title}\n\n> 💡 *Ghi chú được lưu từ Sensei AI*\n\n${this.tempAiContentToSave}\n`;
+
+      const newLesson = Storage.createLesson({
+        title,
+        lessonNumber: null,
+        syllabus,
+        content: formattedContent,
+        tags: [syllabus, 'AI Note']
+      });
+
+      // Đồng bộ lên Firebase nếu đã đăng nhập
+      const currentUser = window.FirebaseService?.getCurrentUser();
+      if (currentUser) {
+        window.FirebaseService.saveLessonToCloud(currentUser.uid, newLesson);
+      }
+
+      this.closeModal(this.modalSaveToLesson);
+      this.renderLessonList();
+
+      // Tự động mở ngay bài học vừa tạo trong trình soạn thảo ghi chú
+      this.openLessonEditor(newLesson, true);
+      this.showToast(`Đã tạo bài học mới "${title}" và lưu nội dung thành công!`, 'success');
+      return;
+    }
+
+    // Chế độ lưu vào bài học đã có
+    const targetId = this.selectTargetLesson ? this.selectTargetLesson.value : null;
+    if (!targetId) {
+      alert('Vui lòng chọn bài học bạn muốn lưu vào!');
+      return;
+    }
 
     const targetLesson = Storage.getLesson(targetId);
     if (!targetLesson) return;
@@ -1132,6 +1343,15 @@
       Storage.appendContentToLesson(targetId, this.tempAiContentToSave);
     } else {
       Storage.updateLesson(targetId, { content: this.tempAiContentToSave });
+    }
+
+    // Đồng bộ bài học cập nhật lên Firebase
+    const currentUser = window.FirebaseService?.getCurrentUser();
+    if (currentUser) {
+      const refreshedLesson = Storage.getLesson(targetId);
+      if (refreshedLesson) {
+        window.FirebaseService.saveLessonToCloud(currentUser.uid, refreshedLesson);
+      }
     }
 
     this.closeModal(this.modalSaveToLesson);
@@ -1162,6 +1382,156 @@
       this.btnThemeToggle.title = theme === 'dark' ? 'Chuyển sang giao diện Sáng' : 'Chuyển sang giao diện Tối';
     }
   }
+
+  // =========================================================================
+  // FIREBASE CLOUD & GOOGLE AUTHENTICATION
+  // =========================================================================
+
+  initFirebase() {
+    if (!window.FirebaseService) return;
+
+    // Khởi tạo Firebase Service
+    window.FirebaseService.init();
+
+    // Lắng nghe thay đổi trạng thái đăng nhập
+    window.FirebaseService.onAuthStateChanged((user) => {
+      this.handleAuthStateChanged(user);
+    });
+  }
+
+  handleAuthStateChanged(user) {
+    if (user) {
+      // Đã đăng nhập
+      if (this.btnGoogleLogin) this.btnGoogleLogin.classList.add('hidden');
+      if (this.userProfileMenu) this.userProfileMenu.classList.remove('hidden');
+
+      const photo = user.photoURL || 'icons/icon-192.png';
+      const name = user.displayName || user.email.split('@')[0];
+
+      if (this.userAvatarImg) this.userAvatarImg.src = photo;
+      if (this.userDisplayName) this.userDisplayName.textContent = name;
+      if (this.userDropdownAvatar) this.userDropdownAvatar.src = photo;
+      if (this.userDropdownName) this.userDropdownName.textContent = name;
+      if (this.userDropdownEmail) this.userDropdownEmail.textContent = user.email || '';
+
+      // Tự động đồng bộ bài học & chat với Firestore
+      this.syncWithCloud(user.uid);
+    } else {
+      // Chưa đăng nhập
+      if (this.btnGoogleLogin) this.btnGoogleLogin.classList.remove('hidden');
+      if (this.userProfileMenu) this.userProfileMenu.classList.add('hidden');
+      if (this.userDropdownPanel) this.userDropdownPanel.classList.add('hidden');
+    }
+  }
+
+  async handleGoogleLogin() {
+    if (!window.FirebaseConfigManager || !window.FirebaseConfigManager.isConfigured()) {
+      this.showToast('Chưa cấu hình Firebase! Vui lòng điền thông tin vào file js/firebase-config.js.', 'warning');
+      return;
+    }
+
+    this.showToast('Đang mở cửa sổ đăng nhập Google...', 'info');
+    const result = await window.FirebaseService.loginWithGoogle();
+
+    if (result.needConfig) {
+      this.showToast('Chưa cấu hình Firebase! Vui lòng điền thông tin vào file js/firebase-config.js.', 'warning');
+      return;
+    }
+
+    if (result.success) {
+      this.showToast(`Đăng nhập thành công! Xin chào ${result.user?.displayName || 'bạn'}!`, 'success');
+    } else {
+      this.showToast(result.error || 'Đăng nhập Google thất bại.', 'error');
+    }
+  }
+
+  async handleGoogleLogout() {
+    if (!confirm('Bạn có chắc muốn đăng xuất tài khoản Google không?')) {
+      return;
+    }
+    if (this.userDropdownPanel) {
+      this.userDropdownPanel.classList.add('hidden');
+    }
+    await window.FirebaseService.logout();
+    this.showToast('Đã đăng xuất tài khoản Google.', 'info');
+  }
+
+  async syncWithCloud(uid) {
+    if (!uid || !window.FirebaseService) return;
+
+    if (this.syncCloudStatus) {
+      this.syncCloudStatus.className = 'sync-status-icon syncing';
+      this.syncCloudStatus.title = 'Đang đồng bộ dữ liệu với Firebase Cloud...';
+    }
+    if (this.statSyncText) {
+      this.statSyncText.textContent = '🔄 Đang đồng bộ...';
+    }
+
+    try {
+      // 1. Đồng bộ bài học
+      const localLessons = Storage.getLessons();
+      const mergedLessons = await window.FirebaseService.syncLessons(uid, localLessons);
+      Storage.saveLessons(mergedLessons);
+      this.renderLessonList();
+
+      // Nếu đang mở bài học thì refresh lại
+      if (this.activeLesson) {
+        const refreshed = Storage.getLesson(this.activeLesson.id);
+        if (refreshed) {
+          this.editor.loadLesson(refreshed);
+        }
+      }
+
+      // 2. Đồng bộ lịch sử Chat AI
+      const cloudChat = await window.FirebaseService.fetchChatHistoryFromCloud(uid);
+      if (cloudChat && cloudChat.length > 0) {
+        // Nếu chat ở máy local chỉ có 1 tin nhắn chào mặc định hoặc rỗng, dùng chat từ cloud
+        if (this.chatHistory.length <= 1) {
+          this.chatHistory = cloudChat;
+          Storage.saveChatHistory(cloudChat);
+          this.renderChatMessages();
+        } else {
+          // Lưu chat local lên cloud
+          window.FirebaseService.saveChatHistoryToCloud(uid, this.chatHistory);
+        }
+      } else if (this.chatHistory && this.chatHistory.length > 0) {
+        window.FirebaseService.saveChatHistoryToCloud(uid, this.chatHistory);
+      }
+
+      if (this.syncCloudStatus) {
+        this.syncCloudStatus.className = 'sync-status-icon synced';
+        this.syncCloudStatus.title = `Đã đồng bộ an toàn ${mergedLessons.length} bài học lên Firebase Cloud`;
+      }
+      if (this.statSyncText) {
+        this.statSyncText.textContent = `☁️ Đã đồng bộ ${mergedLessons.length} bài học`;
+      }
+      this.showToast(`Đã đồng bộ ${mergedLessons.length} bài học từ Firebase Cloud!`, 'success');
+    } catch (e) {
+      console.error('Lỗi khi đồng bộ dữ liệu đám mây:', e);
+      if (this.syncCloudStatus) {
+        this.syncCloudStatus.className = 'sync-status-icon';
+        this.syncCloudStatus.title = 'Lỗi kết nối đồng bộ';
+      }
+      if (this.statSyncText) {
+        this.statSyncText.textContent = '⚠️ Lỗi đồng bộ đám mây';
+      }
+    }
+  }
+
+  async handleManualSync() {
+    const user = window.FirebaseService?.getCurrentUser();
+    if (!user) {
+      this.showToast('Vui lòng đăng nhập Google để đồng bộ dữ liệu.', 'warning');
+      return;
+    }
+    if (this.userDropdownPanel) {
+      this.userDropdownPanel.classList.add('hidden');
+    }
+    this.showToast('Đang tiến hành đồng bộ dữ liệu với Firebase Cloud...', 'info');
+    await this.syncWithCloud(user.uid);
+  }
+
+
 
   openModal(modalEl) {
     if (modalEl) modalEl.classList.remove('hidden');
