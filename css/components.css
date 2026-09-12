@@ -115,11 +115,15 @@
   background: var(--bg-subtle);
   color: var(--primary);
   border: 1px solid var(--border-color);
-  padding: 4px 10px;
+  padding: 6px 14px;
+  min-height: 34px;
   border-radius: var(--radius-sm);
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition: all 0.2s;
 }
 
@@ -130,10 +134,20 @@
 }
 
 .btn-card-delete {
-  font-size: 0.85rem;
-  opacity: 0.6;
+  font-size: 0.95rem;
+  opacity: 0.7;
+  padding: 6px 8px;
+  min-width: 34px;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.2s;
 }
-.btn-card-delete:hover {
+.btn-card-delete:hover,
+.btn-card-delete:active {
   opacity: 1;
   color: var(--danger);
   background: var(--danger-light);

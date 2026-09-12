@@ -16,11 +16,32 @@
     this.chatHistory = [];
     this.tempAiContentToSave = ''; // Lưu trữ nội dung AI khi mở modal chọn bài học
 
+    this.initMobileViewportHelper();
     this.initElements();
     this.initLayoutResizer();
     this.initEditor();
     this.bindEvents();
     this.loadInitialState();
+  }
+
+  // Cập nhật chiều cao màn hình thực tế (Visual Viewport) cho thiết bị di động
+  initMobileViewportHelper() {
+    const updateHeight = () => {
+      const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      document.documentElement.style.setProperty('--app-height', `${vh}px`);
+    };
+
+    updateHeight();
+    window.addEventListener('resize', updateHeight);
+    window.addEventListener('orientationchange', () => {
+      setTimeout(updateHeight, 100);
+      setTimeout(updateHeight, 300);
+    });
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', updateHeight);
+      window.visualViewport.addEventListener('scroll', updateHeight);
+    }
   }
 
   initElements() {
@@ -272,8 +293,15 @@
       this.tabBtnLessons.classList.toggle('active', tabName === 'lessons');
       this.tabBtnChat.classList.toggle('active', tabName === 'chat');
     }
-    if (tabName === 'chat' && this.chatTabBadge) {
-      this.chatTabBadge.classList.add('hidden');
+    if (tabName === 'chat') {
+      if (this.chatTabBadge) {
+        this.chatTabBadge.classList.add('hidden');
+      }
+      setTimeout(() => {
+        if (this.chatMessagesContainer) {
+          this.chatMessagesContainer.scrollTop = this.chatMessagesContainer.scrollHeight;
+        }
+      }, 50);
     }
   }
 
