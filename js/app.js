@@ -106,6 +106,7 @@
 
     // Google Auth & User Profile
     this.btnGoogleLogin = document.getElementById('btn-google-login');
+    this.btnGateGoogleLogin = document.getElementById('btn-gate-google-login');
     this.userProfileMenu = document.getElementById('user-profile-menu');
     this.btnUserProfile = document.getElementById('btn-user-profile');
     this.userAvatarImg = document.getElementById('user-avatar-img');
@@ -383,6 +384,9 @@
     // Google Auth & User Profile Events
     if (this.btnGoogleLogin) {
       this.btnGoogleLogin.addEventListener('click', () => this.handleGoogleLogin());
+    }
+    if (this.btnGateGoogleLogin) {
+      this.btnGateGoogleLogin.addEventListener('click', () => this.handleGoogleLogin());
     }
     if (this.btnGoogleLogout) {
       this.btnGoogleLogout.addEventListener('click', () => this.handleGoogleLogout());
@@ -1388,7 +1392,10 @@
   // =========================================================================
 
   initFirebase() {
-    if (!window.FirebaseService) return;
+    if (!window.FirebaseService) {
+      document.body.classList.remove('auth-loading');
+      return;
+    }
 
     // Khởi tạo Firebase Service
     window.FirebaseService.init();
@@ -1397,16 +1404,26 @@
     window.FirebaseService.onAuthStateChanged((user) => {
       this.handleAuthStateChanged(user);
     });
+
+    // Timeout an toàn đảm bảo gỡ bỏ auth-loading sau 800ms
+    setTimeout(() => {
+      document.body.classList.remove('auth-loading');
+    }, 800);
   }
 
   handleAuthStateChanged(user) {
+    document.body.classList.remove('auth-loading');
+
     if (user) {
-      // Đã đăng nhập
+      // Đã đăng nhập: Kích hoạt toàn bộ không gian làm việc
+      document.body.classList.remove('is-unauthenticated');
+      document.body.classList.add('is-authenticated');
+
       if (this.btnGoogleLogin) this.btnGoogleLogin.classList.add('hidden');
       if (this.userProfileMenu) this.userProfileMenu.classList.remove('hidden');
 
       const photo = user.photoURL || 'icons/icon-192.png';
-      const name = user.displayName || user.email.split('@')[0];
+      const name = user.displayName || (user.email ? user.email.split('@')[0] : 'Người dùng');
 
       if (this.userAvatarImg) this.userAvatarImg.src = photo;
       if (this.userDisplayName) this.userDisplayName.textContent = name;
@@ -1417,10 +1434,18 @@
       // Tự động đồng bộ bài học & chat với Firestore
       this.syncWithCloud(user.uid);
     } else {
-      // Chưa đăng nhập
+      // Chưa đăng nhập: Chặn toàn bộ không gian làm việc, chỉ hiển thị cổng đăng nhập
+      document.body.classList.remove('is-authenticated');
+      document.body.classList.add('is-unauthenticated');
+
       if (this.btnGoogleLogin) this.btnGoogleLogin.classList.remove('hidden');
       if (this.userProfileMenu) this.userProfileMenu.classList.add('hidden');
       if (this.userDropdownPanel) this.userDropdownPanel.classList.add('hidden');
+
+      this.activeLesson = null;
+      if (typeof this.switchView === 'function') {
+        this.switchView('list');
+      }
     }
   }
 
@@ -1430,18 +1455,33 @@
       return;
     }
 
-    this.showToast('Đang mở cửa sổ đăng nhập Google...', 'info');
-    const result = await window.FirebaseService.loginWithGoogle();
+    const setButtonsState = (loading) => {
+      const btns = [this.btnGateGoogleLogin, this.btnGoogleLogin];
+      btns.forEach((btn) => {
+        if (!btn) return;
+        btn.disabled = loading;
+        btn.style.opacity = loading ? '0.7' : '1';
+        btn.style.pointerEvents = loading ? 'none' : 'auto';
+      });
+    };
 
-    if (result.needConfig) {
-      this.showToast('Chưa cấu hình Firebase! Vui lòng điền thông tin vào file js/firebase-config.js.', 'warning');
-      return;
-    }
+    try {
+      setButtonsState(true);
+      this.showToast('Đang mở cửa sổ đăng nhập Google...', 'info');
+      const result = await window.FirebaseService.loginWithGoogle();
 
-    if (result.success) {
-      this.showToast(`Đăng nhập thành công! Xin chào ${result.user?.displayName || 'bạn'}!`, 'success');
-    } else {
-      this.showToast(result.error || 'Đăng nhập Google thất bại.', 'error');
+      if (result.needConfig) {
+        this.showToast('Chưa cấu hình Firebase! Vui lòng điền thông tin vào file js/firebase-config.js.', 'warning');
+        return;
+      }
+
+      if (result.success) {
+        this.showToast(`Đăng nhập thành công! Xin chào ${result.user?.displayName || 'bạn'}!`, 'success');
+      } else {
+        this.showToast(result.error || 'Đăng nhập Google thất bại.', 'error', 9000);
+      }
+    } finally {
+      setButtonsState(false);
     }
   }
 
@@ -1453,6 +1493,8 @@
       this.userDropdownPanel.classList.add('hidden');
     }
     await window.FirebaseService.logout();
+    this.activeLesson = null;
+    this.switchView('list');
     this.showToast('Đã đăng xuất tài khoản Google.', 'info');
   }
 
@@ -1541,7 +1583,7 @@
     if (modalEl) modalEl.classList.add('hidden');
   }
 
-  showToast(message, type = 'info') {
+  showToast(message, type = 'info', duration = 3200) {
     if (!this.toastContainer) return;
     const toast = document.createElement('div');
     toast.className = `toast-item toast-${type}`;
@@ -1549,14 +1591,17 @@
     let icon = 'ℹ️';
     if (type === 'success') icon = '✅';
     if (type === 'error') icon = '❌';
+    if (type === 'warning') icon = '⚠️';
 
     toast.innerHTML = `<span class="toast-icon">${icon}</span><span class="toast-text">${this.escapeHtml(message)}</span>`;
     this.toastContainer.appendChild(toast);
 
+    const actualDuration = (type === 'error' && duration === 3200) ? 7500 : duration;
+
     setTimeout(() => {
       toast.classList.add('fade-out');
       setTimeout(() => toast.remove(), 300);
-    }, 3200);
+    }, actualDuration);
   }
 
   escapeHtml(str) {

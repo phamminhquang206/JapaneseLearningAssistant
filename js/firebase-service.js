@@ -123,9 +123,26 @@
         return { success: true, user };
       } catch (error) {
         console.error('Lỗi khi đăng nhập Google:', error);
+        let errorMsg = error.message || 'Không thể đăng nhập bằng Google. Vui lòng thử lại.';
+        const currentHost = window.location.hostname || 'localhost';
+
+        if (error.code === 'auth/unauthorized-domain') {
+          errorMsg = `Tên miền "${currentHost}" chưa được ủy quyền trên Firebase. Vui lòng thêm "${currentHost}" vào mục "Authorized domains" trên Firebase Console (Authentication > Settings > Authorized domains).`;
+          if (currentHost === '127.0.0.1') {
+            errorMsg += ' Mẹo: Bạn có thể đổi địa chỉ thanh địa chỉ thành http://localhost:8085 để đăng nhập.';
+          }
+        } else if (error.code === 'auth/popup-closed-by-user') {
+          errorMsg = 'Cửa sổ đăng nhập Google đã bị đóng trước khi hoàn tất.';
+        } else if (error.code === 'auth/cancelled-popup-request') {
+          errorMsg = 'Yêu cầu đăng nhập đã bị hủy.';
+        } else if (error.code === 'auth/operation-not-allowed') {
+          errorMsg = 'Phương thức đăng nhập bằng Google chưa được Bật (Enable) trên Firebase Console > Authentication > Sign-in method.';
+        }
+
         return {
           success: false,
-          error: error.message || 'Không thể đăng nhập bằng Google. Vui lòng thử lại.'
+          error: errorMsg,
+          code: error.code
         };
       }
     },

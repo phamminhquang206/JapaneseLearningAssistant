@@ -2,7 +2,7 @@
  * sw.js - Service Worker cho NihonGo AI Progressive Web App (PWA)
  */
 
-const CACHE_NAME = 'nihongo-ai-v2';
+const CACHE_NAME = 'nihongo-ai-v3';
 const STATIC_ASSETS = [
   './',
   './index.html',
