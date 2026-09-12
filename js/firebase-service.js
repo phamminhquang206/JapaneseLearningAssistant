@@ -13,6 +13,7 @@
     isInitialized: false,
     currentUser: null,
     authListeners: [],
+    lessonUnsubscribe: null,
 
     /**
      * Khởi tạo Firebase nếu có cấu hình hợp lệ
@@ -198,57 +199,43 @@
     },
 
     /**
-     * Hợp nhất (Sync & Merge) dữ liệu bài học giữa Cloud và Local
+     * Đồng bộ dữ liệu bài học từ Cloud Firestore xuống Local.
+     * Cloud Firestore là Nguồn Chân Lý duy nhất (Single Source of Truth).
+     * Bất kỳ bài học nào đã xóa ở thiết bị bất kỳ thì trên database sẽ xóa luôn,
+     * các thiết bị khác khi đồng bộ/tải lại sẽ loại bỏ bài học đó, tuyệt đối không tải ngược lên lại.
      * @param {string} uid
      * @param {Array} localLessons
-     * @returns {Promise<Array>} Danh sách bài học đã hợp nhất
+     * @returns {Promise<Array>} Danh sách bài học chuẩn từ Cloud Firestore
      */
     async syncLessons(uid, localLessons = []) {
       if (!this.db || !uid) return localLessons;
 
       try {
         const cloudLessons = await this.fetchLessonsFromCloud(uid);
-        const mergedMap = new Map();
+        const migrationKey = `nihongo_cloud_init_${uid}`;
+        const hasMigrated = localStorage.getItem(migrationKey);
 
-        // 1. Nạp bài học từ Cloud vào Map
-        cloudLessons.forEach((cl) => {
-          mergedMap.set(cl.id, cl);
-        });
-
-        const batch = this.db.batch();
-        let hasUploads = false;
-
-        // 2. So sánh với bài học cục bộ
-        localLessons.forEach((ll) => {
-          if (!mergedMap.has(ll.id)) {
-            // Bài học chỉ có ở local -> Thêm vào Cloud
-            mergedMap.set(ll.id, ll);
+        // Trường hợp duy nhất tải từ local lên Cloud:
+        // Lần đầu tiên tài khoản này đăng nhập vào hệ thống, Cloud chưa có bài học nào (0 bài),
+        // và máy local này có dữ liệu cũ cần đưa lên đám mây.
+        if (!hasMigrated && cloudLessons.length === 0 && localLessons && localLessons.length > 0) {
+          const batch = this.db.batch();
+          localLessons.forEach((ll) => {
             const docRef = this.db.collection('users').doc(uid).collection('lessons').doc(ll.id);
             batch.set(docRef, ll);
-            hasUploads = true;
-          } else {
-            // Có ở cả 2 nơi: So sánh updatedAt để lấy bản mới nhất
-            const cl = mergedMap.get(ll.id);
-            const localTime = new Date(ll.updatedAt || ll.createdAt || 0).getTime();
-            const cloudTime = new Date(cl.updatedAt || cl.createdAt || 0).getTime();
-
-            if (localTime > cloudTime) {
-              mergedMap.set(ll.id, ll);
-              const docRef = this.db.collection('users').doc(uid).collection('lessons').doc(ll.id);
-              batch.set(docRef, ll);
-              hasUploads = true;
-            }
-          }
-        });
-
-        // Nếu có bài học mới cần upload lên cloud thì commit batch
-        if (hasUploads) {
+          });
           await batch.commit();
+          localStorage.setItem(migrationKey, 'true');
+          return localLessons;
         }
 
-        const mergedList = Array.from(mergedMap.values());
-        mergedList.sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
-        return mergedList;
+        // Đánh dấu đã khởi tạo
+        localStorage.setItem(migrationKey, 'true');
+
+        // CLOUD LÀ DUY NHẤT:
+        // Trả về chính xác những bài học đang tồn tại trên Cloud Firestore.
+        // Bất kỳ bài nào bị xóa trên Cloud sẽ bị loại bỏ khỏi LocalStorage.
+        return cloudLessons;
       } catch (error) {
         console.error('Lỗi khi đồng bộ bài học với Firestore:', error);
         return localLessons;
@@ -256,12 +243,62 @@
     },
 
     /**
+     * Lắng nghe bài học thay đổi theo thời gian thực (Real-time Firestore Listener)
+     * Khi có bất kỳ thiết bị nào thêm, sửa, hoặc xóa bài học, sự kiện này sẽ kích hoạt ngay lập tức.
+     * @param {string} uid
+     * @param {Function} callback
+     */
+    listenToLessons(uid, callback) {
+      if (!this.db || !uid) return;
+
+      // Dừng listener cũ nếu có
+      this.stopListeningToLessons();
+
+      try {
+        this.lessonUnsubscribe = this.db
+          .collection('users')
+          .doc(uid)
+          .collection('lessons')
+          .onSnapshot(
+            (snapshot) => {
+              const lessons = [];
+              snapshot.forEach((doc) => {
+                lessons.push(doc.data());
+              });
+              lessons.sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
+              if (typeof callback === 'function') {
+                callback(lessons);
+              }
+            },
+            (error) => {
+              console.warn('Lỗi Firestore onSnapshot bài học:', error);
+            }
+          );
+      } catch (err) {
+        console.warn('Không thể khởi tạo onSnapshot:', err);
+      }
+    },
+
+    /**
+     * Dừng lắng nghe thời gian thực bài học
+     */
+    stopListeningToLessons() {
+      if (this.lessonUnsubscribe) {
+        try {
+          this.lessonUnsubscribe();
+        } catch (e) {}
+        this.lessonUnsubscribe = null;
+      }
+    },
+
+    /**
      * Lưu hoặc cập nhật 1 bài học lên Firestore
      * @param {string} uid
      * @param {Object} lesson
+     * @returns {Promise<boolean>}
      */
     async saveLessonToCloud(uid, lesson) {
-      if (!this.db || !uid || !lesson || !lesson.id) return;
+      if (!this.db || !uid || !lesson || !lesson.id) return false;
       try {
         await this.db
           .collection('users')
@@ -269,8 +306,10 @@
           .collection('lessons')
           .doc(lesson.id)
           .set(lesson, { merge: true });
+        return true;
       } catch (error) {
         console.error('Lỗi lưu bài học lên Cloud:', error);
+        return false;
       }
     },
 
@@ -278,9 +317,10 @@
      * Xóa 1 bài học khỏi Firestore
      * @param {string} uid
      * @param {string} lessonId
+     * @returns {Promise<boolean>}
      */
     async deleteLessonFromCloud(uid, lessonId) {
-      if (!this.db || !uid || !lessonId) return;
+      if (!this.db || !uid || !lessonId) return false;
       try {
         await this.db
           .collection('users')
@@ -288,8 +328,11 @@
           .collection('lessons')
           .doc(lessonId)
           .delete();
+        console.log(`Đã xóa bài học ${lessonId} trên Cloud Firestore.`);
+        return true;
       } catch (error) {
         console.error('Lỗi xóa bài học trên Cloud:', error);
+        throw error;
       }
     },
 

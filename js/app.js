@@ -720,15 +720,33 @@
       });
 
       // Event xóa bài học
-      card.querySelector('.btn-card-delete').addEventListener('click', (e) => {
+      card.querySelector('.btn-card-delete').addEventListener('click', async (e) => {
         e.stopPropagation();
-        if (confirm(`Bạn có chắc muốn xóa "${lesson.title}" không?`)) {
-          Storage.deleteLesson(lesson.id);
-          const currentUser = window.FirebaseService?.getCurrentUser();
-          if (currentUser) {
-            window.FirebaseService.deleteLessonFromCloud(currentUser.uid, lesson.id);
+        if (!confirm(`Bạn có chắc muốn xóa "${lesson.title}" không?`)) {
+          return;
+        }
+
+        // 1. Xóa ngay trên LocalStorage
+        Storage.deleteLesson(lesson.id);
+
+        if (this.activeLesson && this.activeLesson.id === lesson.id) {
+          this.activeLesson = null;
+          this.switchView('list');
+        }
+
+        this.renderLessonList();
+
+        // 2. Xóa ngay trên Cloud Firestore Database
+        const currentUser = window.FirebaseService?.getCurrentUser();
+        if (currentUser) {
+          try {
+            await window.FirebaseService.deleteLessonFromCloud(currentUser.uid, lesson.id);
+            this.showToast(`Đã xóa "${lesson.title}" trên Cloud database.`, 'info');
+          } catch (err) {
+            console.error('Lỗi khi xóa bài học trên Cloud:', err);
+            this.showToast('Đã xóa cục bộ nhưng không thể kết nối Cloud để xóa trên database.', 'warning');
           }
-          this.renderLessonList();
+        } else {
           this.showToast('Đã xóa bài học.', 'info');
         }
       });
@@ -1442,7 +1460,12 @@
       if (this.userProfileMenu) this.userProfileMenu.classList.add('hidden');
       if (this.userDropdownPanel) this.userDropdownPanel.classList.add('hidden');
 
+      if (window.FirebaseService) {
+        window.FirebaseService.stopListeningToLessons();
+      }
       this.activeLesson = null;
+      Storage.saveLessons([]);
+      this.renderLessonList();
       if (typeof this.switchView === 'function') {
         this.switchView('list');
       }
@@ -1492,8 +1515,13 @@
     if (this.userDropdownPanel) {
       this.userDropdownPanel.classList.add('hidden');
     }
-    await window.FirebaseService.logout();
+    if (window.FirebaseService) {
+      window.FirebaseService.stopListeningToLessons();
+      await window.FirebaseService.logout();
+    }
     this.activeLesson = null;
+    Storage.saveLessons([]);
+    this.renderLessonList();
     this.switchView('list');
     this.showToast('Đã đăng xuất tài khoản Google.', 'info');
   }
@@ -1510,17 +1538,26 @@
     }
 
     try {
-      // 1. Đồng bộ bài học
+      // 1. Đồng bộ bài học từ Cloud Firestore (Cloud là Nguồn Chân Lý duy nhất)
       const localLessons = Storage.getLessons();
-      const mergedLessons = await window.FirebaseService.syncLessons(uid, localLessons);
-      Storage.saveLessons(mergedLessons);
+      const cloudLessons = await window.FirebaseService.syncLessons(uid, localLessons);
+      Storage.saveLessons(cloudLessons);
       this.renderLessonList();
 
-      // Nếu đang mở bài học thì refresh lại
+      // Kích hoạt Real-time Listener (đồng bộ thời gian thực đa thiết bị)
+      window.FirebaseService.listenToLessons(uid, (realtimeLessons) => {
+        this.handleRealtimeLessons(realtimeLessons);
+      });
+
+      // Nếu đang mở bài học thì kiểm tra và refresh lại
       if (this.activeLesson) {
         const refreshed = Storage.getLesson(this.activeLesson.id);
         if (refreshed) {
           this.editor.loadLesson(refreshed);
+        } else {
+          // Bài học đang mở đã bị xóa ở thiết bị khác
+          this.activeLesson = null;
+          this.switchView('list');
         }
       }
 
@@ -1542,12 +1579,12 @@
 
       if (this.syncCloudStatus) {
         this.syncCloudStatus.className = 'sync-status-icon synced';
-        this.syncCloudStatus.title = `Đã đồng bộ an toàn ${mergedLessons.length} bài học lên Firebase Cloud`;
+        this.syncCloudStatus.title = `Đã đồng bộ an toàn ${cloudLessons.length} bài học từ Firebase Cloud`;
       }
       if (this.statSyncText) {
-        this.statSyncText.textContent = `☁️ Đã đồng bộ ${mergedLessons.length} bài học`;
+        this.statSyncText.textContent = `☁️ Đã đồng bộ ${cloudLessons.length} bài học`;
       }
-      this.showToast(`Đã đồng bộ ${mergedLessons.length} bài học từ Firebase Cloud!`, 'success');
+      this.showToast(`Đã đồng bộ ${cloudLessons.length} bài học từ Firebase Cloud!`, 'success');
     } catch (e) {
       console.error('Lỗi khi đồng bộ dữ liệu đám mây:', e);
       if (this.syncCloudStatus) {
@@ -1556,6 +1593,26 @@
       }
       if (this.statSyncText) {
         this.statSyncText.textContent = '⚠️ Lỗi đồng bộ đám mây';
+      }
+    }
+  }
+
+  handleRealtimeLessons(realtimeLessons) {
+    if (!realtimeLessons) return;
+    Storage.saveLessons(realtimeLessons);
+    this.renderLessonList();
+
+    // Nếu đang mở bài học trong editor: kiểm tra xem bài học có bị xóa từ thiết bị khác không
+    if (this.activeLesson) {
+      const stillExists = realtimeLessons.find((l) => l.id === this.activeLesson.id);
+      if (!stillExists) {
+        // Bài học đã bị xóa ở thiết bị khác -> Đóng editor và trở về danh sách
+        this.activeLesson = null;
+        this.switchView('list');
+        this.showToast('Bài học bạn đang xem đã bị xóa từ một thiết bị khác.', 'info');
+      } else if (this.editor && !this.editor.isDirty) {
+        // Cập nhật nội dung mới nhất nếu người dùng không đang gõ dở
+        this.editor.loadLesson(stillExists);
       }
     }
   }
